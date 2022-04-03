@@ -811,6 +811,44 @@ func ShowUser(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 }
 
+func EditUser(w http.ResponseWriter, r *http.Request) {
+	if !CheckSession(w, r) {
+		Login(w, r)
+		return
+	}
+	db := dbConn()
+	nId := r.URL.Query().Get("id")
+	log.Println(nId)
+	rows, err := db.Query("SELECT * FROM users WHERE id=?", nId)
+	if err != nil {
+		panic(err.Error())
+	}
+	user := Credentials{}
+	for rows.Next() {
+		var id int
+		var userrole, lastname, firstname, email, password, cohort, enabled string
+		err = rows.Scan(&id, &userrole, &lastname, &firstname, &email, &password, &cohort, &enabled)
+		if err != nil {
+			panic(err.Error())
+		}
+		user.Id = id
+		user.Userrole = userrole
+		user.Lastname = lastname
+		user.Firstname = firstname
+		user.Email = email
+		user.Password = password
+		user.Password = "It's a secret to everybody!"
+		user.Cohort = cohort
+		if enabled == "True" {
+			user.Enabled = true
+		} else {
+			user.Enabled = false
+		}
+	}
+	tmpl.ExecuteTemplate(w, "EditUser", user)
+	defer db.Close()
+}
+
 func ListSkills(w http.ResponseWriter, r *http.Request) {
 	// Load and display skills
 	skilldata := struct {
@@ -872,6 +910,7 @@ func main() {
 	http.HandleFunc("/deleteskill", DeleteSkill)
 
 	http.HandleFunc("/newuser", NewUser)
+	http.HandleFunc("/edituser", EditUser)
 	http.HandleFunc("/showuser", ShowUser)
 
 	http.HandleFunc("/getgroups", GetSkillGroups)
