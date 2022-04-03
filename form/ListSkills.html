@@ -1,0 +1,26 @@
+{{ define "ListSkills" }}
+  {{ template "Header" }}
+    {{ template "Menu"  }}
+    <h2> Skills </h2> 
+    <table class="default">
+      <tr>
+        <th>ID</th>
+        <th>SkillName</th>
+        <th>Group ID</th>
+        <th>Group Name</th>
+        <th>Enabled</th>
+      </tr>
+      <tbody>
+    {{ range . }}
+      <tr>
+        <td>{{ .Id }}</td>
+        <td> {{ .Skillname }} </td>
+        <td>{{ .Groupid }}</td>
+        <td>{{ .Groupname }}</td>
+        <td>{{ .Enabled }} </td> 
+      </tr>
+    {{ end }}
+       </tbody>
+    </table>
+  {{ template "Footer" }}
+{{ end }}

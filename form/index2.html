@@ -1,0 +1,29 @@
+{{ define "Index2" }}
+  <h2> Skills </h2>
+  <table class="default">
+    <tr>
+      <th width="5%">ID</th>
+      <th>SkillName</th>
+      <th width="5%">Group ID</th>
+      <th width="11%">Group Name</th>
+      <th width="11%">Enabled</th>
+      <th width="11%">View</th>
+      <th width="11%">Edit</th>
+      <th width="11%">Delete</th>
+    </tr>
+    <tbody>
+  {{ range . }}
+    <tr>
+      <td>{{ .Id }}</td>
+      <td> {{ .Skillname }} </td>
+      <td>{{ .Groupid }}</td>
+      <td>{{ .Groupname }}</td>
+      <td>{{ .Enabled }} </td>
+      <td><a href="/showskill?id={{ .Id }}">View</a></td>
+      <td><a href="/editskill?id={{ .Id }}">Edit</a></td>
+      <td><a href="/deleteskill?id={{ .Id }}">Delete</a></td>       
+    </tr>
+  {{ end }}
+     </tbody>
+  </table>
+{{ end }}

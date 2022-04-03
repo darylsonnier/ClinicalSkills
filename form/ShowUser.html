@@ -1,0 +1,41 @@
+{{ define "ShowUser" }}
+  {{ template "Header" }}
+    {{ template "Menu"  }}
+      <h2> User {{ .Id }} </h2>
+      <table class="blueTable">
+        <tr>
+          <th>User Role</th>
+          <th>Last Name</th>
+          <th>First Name</th>
+          <th>Email</th>
+          <th>Password</th>
+          <th>Cohort</th>
+          <th>Enabled</th>
+          <th>Action</th>
+        </tr>
+        <tr>
+          <td>{{ .Userrole }}</td>
+          <td>{{ .Lastname }}</td>
+          <td>{{ .Firstname }}</td>
+          <td>{{ .Email }}</td>
+          <td>{{ .Password }}</td>
+          <td>{{ .Cohort }}</td>
+          <td>{{ .Enabled }}</td>
+          <td><a href="/edituser?id={{ .Id }}">Edit</a></td>
+        </tr>
+      </table>
+  {{ template "Footer" }}
+{{ end }}
+
+
+cred.Id = id
+cred.Userrole = userrole
+cred.Lastname = lastname
+cred.Firstname = firstname
+cred.Email = email
+cred.Password = "It's a secret to everybody!"
+cred.Cohort = cohort
+if enabled == "True" {
+  cred.Enabled = true
+} else {
+  cred.Enabled = false

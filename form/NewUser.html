@@ -1,0 +1,61 @@
+{{ define "NewUser" }}
+  {{ template "Header" }}
+    {{ template "Menu" }} 
+   <h2>New User</h2>  
+   <form method="POST" action="insertuser">
+    <table class="blueTable">
+      <tbody>
+      <tr>
+        <td width="33%">
+          <label>Last Name </label>
+          <input type="text" name="lastname" size="45"/>
+        </td>
+        <td width="33%">
+          <label> First Name </label>
+          <input type="text" name="firstname" size="45"/>
+        </td>
+        <td width="33%">
+          <label>Email</label>
+          <input type="text" name="email" size="45"/>
+        </td>
+      </tr>
+      <tr>
+      <td>
+        <label>Password</label>
+        <input type="password" name="password" size="45"/>
+      </td>
+      <td width="33%">
+        <label> Role </label>
+        <select name="userrole">
+          <option value="Admin">Admin</option>
+          <option value="Instructor">Instructor</option>
+          <option value="Student" selected>Student</option>
+        </select>    
+      </td>
+      <td>
+          <label>Cohort</label>
+          <select name="cohort">
+              <option value="SP22">SP22</option>
+              <option value="SUM22">SUM22</option>
+              <option value="FA22">FA22</option>
+              <option value="All">All</option>
+          </select>
+      </td>
+      </tr>
+      <tr>
+        <td>&#43;</td>
+        <td>&#43;</td>
+        <td>&#43;</td>
+      </tr>
+      <tr>
+          <td></td>
+          <td></td>
+          <td>
+              <input type="submit" onclick="ask()" value="Add User" />
+          </td>
+      </tr>
+    </tbody>
+      </table>
+  </form><br /> 
+  {{ template "Footer" }}
+{{ end }}

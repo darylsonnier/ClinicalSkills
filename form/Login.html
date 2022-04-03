@@ -1,0 +1,13 @@
+{{ define "Login" }}
+  {{ template "Header" }}
+    <h2>Login</h2>
+    <form method="POST" action="signin" name="userCredentials" id="loginForm">
+        <label for="Email">Email:</label>
+        <input type="text" name="Email" id="email"><br>
+        <label for="Password">Password:</label>
+        <input type="password" name="Password" id="pword"><br>
+        <input value="submit" type="submit">
+    </form><br /> 
+  </body>
+  {{ template "Footer" }}
+{{ end }}

@@ -1,0 +1,34 @@
+{{ define "Index3" }}
+  <h2> Users </h2>
+  <table class="default">
+    <tr>
+      <th width="5%">ID</th>
+      <th width="5%">User Role</th>
+      <th width="25%">Last Name</th>
+      <th width="25%">First Name</th>
+      <th width="20%">Email</th>
+      <th width="5%">Cohort</th>
+      <th width="5%">Enabled</th>
+      <th width="3%">View</th>
+      <th width="3%">Edit</th>
+      <th width="9%">Delete</th>
+    </tr>
+    <tbody>
+    {{ range . }}
+    <tr>
+      <td>{{ .Id }}</td>
+      <td> {{ .Userrole }} </td>
+      <td> {{ .Lastname }} </td>
+      <td> {{ .Firstname }} </td>
+      <td> {{ .Email }} </td>
+      <td> {{ .Cohort }} </td>
+      <td>{{ .Enabled }} </td> 
+      <td><a href="/showuser?id={{ .Id }}">View</a></td>
+      <td><a href="/edituser?id={{ .Id }}">Edit</a></td>
+      <td><a href="/deleteuser?id={{ .Id }}">Delete</a></td>            
+    </tr>
+    {{ end }}
+    </tbody>
+  </table>
+  {{ template "Footer" }}
+{{ end }}

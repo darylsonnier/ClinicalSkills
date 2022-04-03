@@ -1,0 +1,36 @@
+{{ define "NewSkill" }}
+  {{ template "Header" }}
+    {{ template "Menu" }} 
+   <h2>New Skill </h2>  
+   <form method="POST" action="insertskill">
+    <table class="blueTable">
+      <tbody>
+      <tr>
+        <td width="50%">
+          <label> Name </label>
+          <input type="text" name="name" size="60" />
+        </td>
+        <td>
+          <label> Group </label>
+          <select name="groupid" width="50">
+          {{ range . }}
+            <option value="{{ .Id }}">{{ .Name }}</option>
+          {{ end }}
+          </select>   
+        </td>
+      </tr>
+      <tr>
+      <td width="50%">
+        <label> Enabled </label>
+        <select name="enabled">
+          <option value="True">True</option>
+          <option value="False">False</option>
+        </select>    
+      </td>
+      <td><input type="submit" onclick="ask()" value="Save skill" /></td>
+      </tr>
+      </tbody>
+      </table>
+  </form><br />
+  {{ template "Footer" }}
+{{ end }}

@@ -1,0 +1,37 @@
+{{ define "EditSkill" }}
+  {{ template "Header" }}
+    {{ template "Menu" }} 
+    <h2>Edit Skill</h2>  
+    <form method="POST" action="updateskill">
+      <input type="hidden" name="uid" value="{{ .Id }}" />
+      <table class="blueTable">
+        <tbody>
+        <tr>
+          <td width="50%">
+            <label> Name </label>
+            <input type="text" name="name" value="{{ .Name }}" size="60" />
+          </td>
+          <td>
+            <label> Group </label>
+            <select name="groupid">
+              {{ range $index, $names := .GroupNames }} 
+              <option value="{{ $index }}">{{ $names }}</option>
+              {{ end }}
+            </select>    
+          </td>
+        </tr>
+        <tr>
+        <td width="50%">
+          <label> Enabled </label>
+          <select name="enabled">
+            <option value="True">True</option>
+            <option value="False">False</option>
+          </select>    
+        </td>
+        <td><input type="submit" onclick="ask()" value="Save skill" /></td>
+        </tr>
+        </tbody>
+        </table>
+    </form><br />    
+  {{ template "Footer" }}
+{{ end }}

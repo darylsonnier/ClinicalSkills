@@ -1,0 +1,35 @@
+{{ define "EditGroup" }}
+  {{ template "Header" }}
+    {{ template "Menu" }} 
+   <h2>Edit Skill Group</h2>  
+    <form method="POST" action="updategroup">
+      <input type="hidden" name="uid" value="{{ .Id }}" />
+      <table class="blueTable">
+        <tbody>
+        <tr>
+          <td width="50%">
+            <label> Name </label>
+            <input type="text" name="name" value="{{ .Name }}" size="60" />
+          </td>
+          <td>
+            <label> Class </label>
+            <input type="text" name="class" value="{{ .Class }}" size="60"/><br />
+          </td>
+        </tr>
+        <tr>
+        <td width="50%">
+          <label> Enabled </label>
+          <select name="enabled">
+            <option value="True">True</option>
+            <option value="False">False</option>
+          </select>    
+        </td>
+        <td><input type="submit" onclick="ask()" value="Save group" /></td>
+        </tr>
+        </tbody>
+        </table>
+    </form><br />    
+  {{ template "Footer" }}
+{{ end }}
+
+

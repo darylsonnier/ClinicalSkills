@@ -1,0 +1,32 @@
+{{ define "NewGroup" }}
+  {{ template "Header" }}
+    {{ template "Menu" }} 
+   <h2>New Skill Group</h2>  
+   <form method="POST" action="insertgroup">
+    <table class="blueTable">
+      <tbody>
+      <tr>
+        <td width="50%">
+          <label> Name </label>
+          <input type="text" name="name" size="60"/>
+        </td>
+        <td>
+          <label> Class </label>
+          <input type="text" name="class" size="60"/>
+        </td>
+      </tr>
+      <tr>
+      <td width="50%">
+        <label> Enabled </label>
+        <select name="enabled">
+          <option value="True">True</option>
+          <option value="False">False</option>
+        </select>    
+      </td>
+      <td><input type="submit" onclick="ask()" value="Save Skill Group" /></td>
+      </tr>
+      </tbody>
+      </table>
+  </form><br /> 
+  {{ template "Footer" }}
+{{ end }}
