@@ -92,7 +92,22 @@ nav .start-portal, a:nth-child(6):hover~.animation {
   background-color: #e622e6;
 }
 
+header,
+footer {
+  background: #eee;
+  padding: 1rem;
+}
+
+#main {
+  height: 70%; 
+  overflow-y: scroll;
+}
+
+html,
 body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   text-align: center;
   margin: 5px 0 5px;
   color: #e2e9eb;
@@ -100,6 +115,11 @@ body {
   font-size: 14px;
   font-family: sans-serif;
   background: #18191a;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent; /* make scrollbar transparent */
 }
 
 .viewport {
@@ -195,3 +215,4 @@ a:hover {
 a:active {
   color: rgb(55, 207, 123);
 } 
+

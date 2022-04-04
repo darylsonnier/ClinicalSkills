@@ -45,14 +45,14 @@ type SkillEditor struct {
 
 // Create a struct that models the structure of a user, both in the request body, and in the DB
 type Credentials struct {
-	Id        int    `json:"id"`
-	Userrole  string `json:"userrole"`
-	Lastname  string `json:"lastname"`
-	Firstname string `json:"firstname"`
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	Cohort    string `json:"cohort"`
-	Enabled   bool   `json:"enabled"`
+	Id        int
+	Userrole  string
+	Lastname  string
+	Firstname string
+	Email     string
+	Password  string
+	Cohort    string
+	Enabled   string
 }
 
 type Claims struct {
@@ -161,11 +161,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		cred.Password = password
 		cred.Password = "It's a secret to everybody!"
 		cred.Cohort = cohort
-		if enabled == "True" {
-			cred.Enabled = true
-		} else {
-			cred.Enabled = false
-		}
+		cred.Enabled = enabled
 		ures = append(ures, cred)
 	}
 	tmpl = template.Must(template.ParseGlob("form/*"))
@@ -571,8 +567,7 @@ func GetCredentials() []Credentials {
 	dbusers := []Credentials{}
 	for rows.Next() {
 		var id int
-		var enabled bool
-		var userrole, lastname, firstname, email, password, cohort string
+		var userrole, lastname, firstname, email, password, cohort, enabled string
 		err = rows.Scan(&id, &userrole, &lastname, &firstname, &email, &password, &cohort, &enabled)
 		if err != nil {
 			panic(err.Error())
@@ -801,11 +796,7 @@ func ShowUser(w http.ResponseWriter, r *http.Request) {
 		cred.Password = password
 		cred.Password = "It's a secret to everybody!"
 		cred.Cohort = cohort
-		if enabled == "True" {
-			cred.Enabled = true
-		} else {
-			cred.Enabled = false
-		}
+		cred.Enabled = enabled
 	}
 	tmpl.ExecuteTemplate(w, "ShowUser", cred)
 	defer db.Close()
@@ -818,7 +809,6 @@ func EditUser(w http.ResponseWriter, r *http.Request) {
 	}
 	db := dbConn()
 	nId := r.URL.Query().Get("id")
-	log.Println(nId)
 	rows, err := db.Query("SELECT * FROM users WHERE id=?", nId)
 	if err != nil {
 		panic(err.Error())
@@ -839,14 +829,31 @@ func EditUser(w http.ResponseWriter, r *http.Request) {
 		user.Password = password
 		user.Password = "It's a secret to everybody!"
 		user.Cohort = cohort
-		if enabled == "True" {
-			user.Enabled = true
-		} else {
-			user.Enabled = false
-		}
+		user.Enabled = enabled
 	}
 	tmpl.ExecuteTemplate(w, "EditUser", user)
 	defer db.Close()
+}
+
+func InsertUser(w http.ResponseWriter, r *http.Request) {
+	if !CheckSession(w, r) {
+		Login(w, r)
+		return
+	}
+}
+
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	if !CheckSession(w, r) {
+		Login(w, r)
+		return
+	}
+}
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	if !CheckSession(w, r) {
+		Login(w, r)
+		return
+	}
 }
 
 func ListSkills(w http.ResponseWriter, r *http.Request) {
@@ -909,9 +916,12 @@ func main() {
 	http.HandleFunc("/updateskill", UpdateSkill)
 	http.HandleFunc("/deleteskill", DeleteSkill)
 
+	http.HandleFunc("/showuser", ShowUser)
 	http.HandleFunc("/newuser", NewUser)
 	http.HandleFunc("/edituser", EditUser)
-	http.HandleFunc("/showuser", ShowUser)
+	http.HandleFunc("/insertuser", InsertSkill)
+	http.HandleFunc("/updateuser", UpdateSkill)
+	http.HandleFunc("/deleteuser", DeleteSkill)
 
 	http.HandleFunc("/getgroups", GetSkillGroups)
 	http.HandleFunc("/getskills", GetSkills)

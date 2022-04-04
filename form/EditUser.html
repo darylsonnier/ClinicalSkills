@@ -1,62 +1,70 @@
 {{ define "EditUser" }}
   {{ template "Header" }}
     {{ template "Menu" }} 
-   <h2>Edit Skill Group</h2>  
-    <form method="POST" action="updateuser">
-      <input type="hidden" name="uid" value="{{ .Id }}" />
-      <table class="blueTable">
-        <tbody>
-        <tr>
-          <td>
-            <label>UserRole</label>
-            <select name="userrole"">
-                <option value="admin">Admin</option>
-                <option value="instructor">Instructor</option>
-                <option value="student">Student</option>
-            </select>
-          </td>  
-          <td>
-            <label>Last Name </label>
-            <input type="text" name="lastname" value="{{ .Lastname }}"/>
-          </td>
-          <td>
-            <label> First Name </label>
-            <input type="text" name="firstname" value="{{ .Firstname }}"/>
-          </td>
-          <td>
-            <label>Email</label>
-            <input type="text" name="email" value="{{ .email }}"/>
-          </td>
-        </tr>
-        <tr>
-            <td>
-              <label>Password</label>
-              <input type="password" name="password"/>
-            </td>
-            <td>
-            <label>Cohort</label>
-              <select name="cohort">
-                <option value="SP22">SP22</option>
-                <option value="SUM22">SUM22</option>
-                <option value="FA22">FA22</option>
-                <option value="All">All</option>
-              </select>
-          </td>
-          <td>
-            <label> Enabled </label>
-            <select name="enabled">
-              <option value="True">True</option>
-              <option value="False">False</option>
-            </select>    
-          </td>
-          <td>
-              <input type="submit" onclick="ask()" value="Save user" />
-          </td>
-        </tr>
-        </tbody>
+    <h2>Edit User</h2>
+      <form method="POST" action="updateuser">
+        <input type="hidden" name="uid" value="{{ .Id }}" />
+        <table class="blueTable">
+          <tbody>
+            <tr>
+              <td>
+                <label>UserRole</label>
+                <select name="userrole" id="role">
+                  <option value="admin">Admin</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="student">Student</option>
+                </select>                
+              </td>
+              <td>
+                <label> First Name </label>
+                <input type="text" name="firstname" value="{{ .Firstname }}"/>
+              </td>
+              <td>
+                <label>Last Name </label>
+                <input type="text" name="lastname" value="{{ .Lastname }}"/>
+              </td>
+              <td>
+                <label>Email</label>
+                <input type="text" name="email" value="{{ .Email }}"/>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label>Password</label>
+                <input type="password" name="password" value="{{ .Password }}"/>
+              </td>
+              <td>
+              <label>Cohort</label>
+                <select name="cohort" id="cohort">
+                  <option value="SP22">Spring 22</option>
+                  <option value="SU22">Summer 22</option>
+                  <option value="FA22">Fall 22</option>
+                  <option value="ALL">ALL</option>
+                </select>
+              </td>
+              <td>
+                <label> Enabled </label>
+                <select name="enabled" id="enabled">
+                  <option value="True">True</option>
+                  <option value="False">False</option>
+                </select>    
+              </td>
+              <td>
+                  <input type="submit" onclick="ask()" value="Save user" />
+              </td>
+            </tr>
+          </tbody>
         </table>
-    </form><br />    
+      </form>
+      <script>
+        document.addEventListener('DOMContentLoaded',() => {
+          const $role = document.querySelector('#role');
+          $role.value = '{{ .Userrole }}';
+          const $cohort = document.querySelector('#cohort');
+          $cohort.value = '{{ .Cohort }}';
+          const $enabled = document.querySelector('#enabled');
+          $enabled.value = '{{ .Enabled }}'
+        });
+      </script>
   {{ template "Footer" }}
 {{ end }}
-
-
