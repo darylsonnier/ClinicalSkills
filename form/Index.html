@@ -2,28 +2,30 @@
   {{ template "Header" }}
     {{ template "Menu"  }}
     <h2> Skill Groups </h2> 
-    <table class="default">
-      <tr>
-        <th width="5%">ID</th>
-        <th width="40%">Name</th>
-        <th width="11%">Class</th>
-        <th width="11%">Enabled</th>
-        <th width="11%">View</th>
-        <th width="11%">Edit</th>
-        <th width="11%">Delete</th>
-      </tr>
+    <table class="default js-sort-table">
+      <thead>
+        <tr>
+          <th width="5%">ID</th>
+          <th width="40%">Name</th>
+          <th width="11%">Class</th>
+          <th width="11%">Enabled</th>
+          <th width="11%">View</th>
+          <th width="11%">Edit</th>
+          <th width="11%">Delete</th>
+        </tr>
+      </thead>
       <tbody>
-    {{ range . }}
-      <tr>
-        <td>{{ .Id }}</td>
-        <td> {{ .Name }} </td>
-        <td>{{ .Class }}</td>
-        <td>{{ .Enabled }} </td> 
-        <td><a href="/showgroup?id={{ .Id }}">View</a></td>
-        <td><a href="/editgroup?id={{ .Id }}">Edit</a></td>
-        <td><a href="/deletegroup?id={{ .Id }}">Delete</a></td>
-      </tr>
-    {{ end }}
-       </tbody>
+        {{ range . }}
+        <tr>
+          <td>{{ .Id }}</td>
+          <td> {{ .Name }} </td>
+          <td>{{ .Class }}</td>
+          <td>{{ .Enabled }} </td> 
+          <td><a href="/showgroup?id={{ .Id }}">View</a></td>
+          <td><a href="/editgroup?id={{ .Id }}">Edit</a></td>
+          <td><a href="/deletegroup?id={{ .Id }}">Delete</a></td>
+        </tr>
+        {{ end }}
+      </tbody>
     </table>
 {{ end }}

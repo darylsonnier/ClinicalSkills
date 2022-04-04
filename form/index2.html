@@ -1,16 +1,18 @@
 {{ define "Index2" }}
   <h2> Skills </h2>
-  <table class="default">
-    <tr>
-      <th width="5%">ID</th>
-      <th>SkillName</th>
-      <th width="5%">Group ID</th>
-      <th width="11%">Group Name</th>
-      <th width="11%">Enabled</th>
-      <th width="11%">View</th>
-      <th width="11%">Edit</th>
-      <th width="11%">Delete</th>
-    </tr>
+  <table class="default js-sort-table">
+    <thead>
+      <tr>
+        <th width="5%">ID</th>
+        <th>SkillName</th>
+        <th width="5%">Group ID</th>
+        <th width="11%">Group Name</th>
+        <th width="11%">Enabled</th>
+        <th width="11%">View</th>
+        <th width="11%">Edit</th>
+        <th width="11%">Delete</th>
+      </tr>
+    </thead>
     <tbody>
   {{ range . }}
     <tr>
