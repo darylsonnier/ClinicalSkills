@@ -1,13 +1,30 @@
 {{ define "Menu" }}
-    <nav>
-        <a href="/">HOME</a> | 
-        <a href="/newgroup">New Group</a>
-        <a href="/newskill">New Skill</a>
-        <a href="/newuser">New User</a>
-        <a href="/">User Portal</a>
-        <a href="https://www.lonestar.edu">Lonestar</a>
+    <div class="wrap">
+      <nav>
+      <ul class="primary">
+        <li>
+          <a href="/">Home</a>
+          <ul class="sub">
+            <li><a href="/#skillgroups">Skill Groups</a></li>
+            <li><a href="/#skills">Skills</a></li>
+            <li><a href="/#users">Users</a></li>
+            <li><a href="/">Signoffs</a></li>
+          </ul>        
+        </li>
+        <li>
+          <a href="/">New</a>
+          <ul class="sub">
+            <li><a href="/newgroup">New Group</a></li>
+            <li><a href="/newskill">New Skill</a></li>
+            <li><a href="/newuser">New User</a></li>
+          </ul>
+        </li>
+        <li><a href="/">User Portal</a></li>
+        <li><a href="https://www.lonestar.edu">Lone Star</a></li>
         <div class="animation start-home"></div>
-    </nav>
-    <br>
-    <div id='main' role='main'>
+      </ul>
+      </nav>
+    </div>
+  </div>
+  <div id="content">
 {{ end }}

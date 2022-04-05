@@ -2,12 +2,22 @@
   {{ template "Header" }}
     <h2>Login</h2>
     <form method="POST" action="signin" name="userCredentials" id="loginForm">
-        <label for="Email">Email:</label>
-        <input type="text" name="Email" id="email"><br>
-        <label for="Password">Password:</label>
-        <input type="password" name="Password" id="pword"><br>
-        <input value="submit" type="submit">
-    </form><br /> 
-  </body>
+      <table class="sTable">
+        <thead>
+          <tr>
+            <th><label for="Email">Email:</label></th>
+            <th><label for="Password">Password:</label></th>
+            <th><label>Action:</label></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="text" name="Email" id="email"></td>
+            <td><input type="password" name="Password" id="pword"></td>
+            <td><input value="Login" type="submit"></td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
   {{ template "Footer" }}
 {{ end }}

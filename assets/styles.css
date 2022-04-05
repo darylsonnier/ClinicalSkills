@@ -1,3 +1,184 @@
+/* A simple, css only, (some-what) responsive menu */
+
+nav {
+  width: 720px;
+  position: relative;
+  background: #2B2B2B;
+  text-align: center;
+  letter-spacing: 1px;
+  border-radius: 8px;
+  margin: 0 auto 0;
+  color: rgb(255,255,255);
+}
+
+body { 
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  margin: 5px 0 5px 0;
+  color: #e2e9eb;
+  text-shadow: 2px 2px 4px #000000;                    
+  font-size: 14px;
+  font-family: sans-serif;
+  background: #18191a;
+}
+
+#header{
+  position:absolute; 
+  top:0px; 
+  left:0px; 
+  height:140px; 
+  right:0px;
+  }
+
+#content{
+  position:absolute; 
+  top:140px; 
+  bottom:100px; 
+  left:0px; 
+  right:0px; 
+  overflow:auto;
+}
+
+#footer{
+  position:absolute; 
+  bottom:0px; 
+  height:100px; 
+  left:0px; 
+  right:0px; 
+  overflow:hidden;
+}
+
+.wrap {
+  display: inline-block;
+}
+
+nav a {
+  text-decoration: none;
+  color: #ffffff;
+  display: block;
+  font-weight: bold;
+}
+
+ul {
+  list-style: none;
+  position: relative;
+  text-align: center;
+}
+
+nav li {
+  float: left;
+  width: 160px;
+}
+
+/* clear'n floats */
+ul:after {
+  clear: both;
+}
+
+ul:before,
+ul:after {
+  content: "";
+  display: table;
+}
+
+/* prime */
+ul.primary li a {
+  display: block;
+  padding: 10px 0px 10px 0px;
+  text-align: center;
+}
+
+ul.primary li a:hover {
+  border-radius: 8px;
+  color: #000;
+}
+
+/* subs */
+ul.sub {
+  position: absolute;
+  z-index: 200;
+  width: 120px;
+  display:none;
+}
+
+ul.sub li {
+  float: none;
+  margin: 0;
+  border-bottom: 1px dotted #ccc;
+  border-radius: 8px;
+}
+
+ul.sub li a {
+  color: #000;
+}
+
+ul.sub li:last-child a {
+  border-bottom: none;
+}
+
+ul.sub li a:hover {
+  color: #000;
+  background: #eeeeee;
+}
+
+/* sub display*/
+ul.primary li:hover ul {
+  display: block;
+}
+
+ul.primary li:hover a {
+  background: rgb(221, 212, 212);
+  color: #000;
+  text-shadow: none;
+  width: auto;
+  border-radius: 8px;
+  border: rgb(0,0,0);
+}
+
+ul.primary li:nth-child(1):hover > a{
+  color: #000;
+  background-color: #1abc9c;
+} 
+
+ul.primary li:nth-child(2):hover > a{
+  color: #000;
+  background-color: #e74c3c;
+  border-radius: 8px;
+} 
+ul.primary li:nth-child(3):hover > a{
+  color: #000;
+  background-color: #3498db;
+  border-radius: 8px;
+} 
+ul.primary li:nth-child(4):hover > a{
+  color: #000;
+  background-color: #9b59b6;
+  border-radius: 8px;
+} 
+
+ul.sub li:nth-child(1):hover > a{
+  color: #000;
+  background-color: #9b59b6;
+} 
+
+ul.sub li:nth-child(2):hover > a{
+  color: #000;
+  background-color: #3498db;
+  border-radius: 8px;
+} 
+ul.sub li:nth-child(3):hover > a{
+  color: #000;
+  background-color: #e74c3c;
+  border-radius: 8px;
+} 
+ul.sub li:nth-child(4):hover > a{
+  color: #000;
+  background-color: #1abc9c;
+  border-radius: 8px;
+} 
+
 table.default {
   position: relative;
   border-collapse: collapse;
@@ -11,91 +192,16 @@ table.default th, table.default td {
   box-sizing: border-box;
   border: 1px solid #ddd;
 }
-table.default tr:hover {background-color: rgb(90, 104, 93);}
-nav {
-  margin: 27px auto 0;
-  text-align: left;
-  position: relative;
-  width: 720px;
-  height: 50px;
-  background-color: #34495e;
-  border-radius: 8px;
-  font-size: 0;
-}
-nav a {
-  line-height: 50px;
-  height: 100%;
-  font-size: 15px;
-  display: inline-block;
-  position: relative;
-  z-index: 1;
-  text-decoration: none;
-  text-transform: uppercase;
-  text-align: center;
-  color: white;
-  cursor: pointer;
-}
-nav .animation {
-  position: absolute;
-  height: 100%;
-  top: 0;
-  z-index: 0;
-  transition: all .5s ease 0s;
-  border-radius: 8px;
-}
-a:nth-child(1) {
-  width: 120px;
-}
-a:nth-child(2) {
-  width: 120px;
-}
-a:nth-child(3) {
-  width: 120px;
-}
-a:nth-child(4) {
-  width: 120px;
-}
-a:nth-child(5) {
-  width: 120px;
-}
-a:nth-child(6) {
-  width: 120px;
-}                
-nav .start-home, a:nth-child(1):hover~.animation {
-  width: 120px;
-  left: 0;
-  background-color: #1abc9c;
-}
-nav .start-about, a:nth-child(2):hover~.animation {
-  width: 120px;
-  left: 120px;
-  background-color: #e74c3c;
-}
-nav .start-blog, a:nth-child(3):hover~.animation {
-  width: 120px;
-  left: 240px;
-  background-color: #3498db;
-}
-nav .start-portfolio, a:nth-child(4):hover~.animation {
-  width: 120px;
-  left: 360px;
-  background-color: #9b59b6;
-}
-nav .start-contact, a:nth-child(5):hover~.animation {
-  width: 120px;
-  left: 480px;
-  background-color: #e67e22;
-}
-nav .start-portal, a:nth-child(6):hover~.animation {
-  width: 120px;
-  left: 600px;
-  background-color: #e622e6;
+table.default tr:hover {
+  background-color: rgb(90, 104, 93);
 }
 
 header,
 footer {
-  background: #eee;
+  /*background: #2B2B2B;*/
+  background: #18191a;
   padding: 1rem;
+  flex-shrink: 0;
 }
 
 #main {
@@ -103,37 +209,14 @@ footer {
   overflow-y: scroll;
 }
 
-html,
-body {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  text-align: center;
-  margin: 5px 0 5px;
-  color: #e2e9eb;
-  text-shadow: 2px 2px 4px #000000;                    
-  font-size: 14px;
-  font-family: sans-serif;
-  background: #18191a;
-}
-
 ::-webkit-scrollbar {
   width: 0px;
   background: transparent; /* make scrollbar transparent */
 }
 
-.viewport {
-  text-align: center;
-  margin: 5px 0 5px;
-  font-size: 14px;
-  color: #ecf0f1;
-  text-shadow: 2px 2px 4px #000000;
-  font-family: 'Cherry Swash', cursive;
-}
-
 h1 {
   text-align: center;
-  margin: 40px 0 40px;
+  margin: 5px 0 5px;
   text-align: center;
   font-size: 30px;
   color: #ecf0f1;
@@ -157,10 +240,6 @@ p {
   color: #ecf0f1;
   font-family: 'Cherry Swash',cursive;
   font-size: 16px;
-}
-
-span {
-  color: #ecf0f1;
 }
 
 table.blueTable {
@@ -194,7 +273,7 @@ table.blueTable tfoot .links a{
   background: #1C6EA4;
   color: #FFFFFF;
   padding: 2px 8px;
-  border-radius: 5px;
+  border-radius: 8px;
 }    
  /* unvisited link */
  a:link {
@@ -216,3 +295,95 @@ a:active {
   color: rgb(55, 207, 123);
 } 
 
+table.sTable {
+  border: 1px solid #1C6EA4;
+  background-color: #4d4c4c;
+  width: 30%;
+  text-align: left;
+  border-collapse: collapse;
+  position: relative;
+  margin: 0 auto
+}
+table.sTable td, table.sTable th {
+  border: 1px solid #424040;
+  padding: 8px;
+  text-align: center;
+}
+table.sTable tbody td {
+  font-size: 13px;
+}
+table.sTable tr:nth-child(even) {
+  background: #3d5569;
+}
+table.sTable tfoot td {
+  font-size: 14px;
+}
+table.sTable tfoot .links {
+  text-align: right;
+}
+table.sTable tfoot .links a{
+  display: inline-block;
+  background: #1C6EA4;
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 8px;
+}    
+
+.viewport {
+  text-align: center;
+  margin: 5px 0 5px;
+  font-size: 14px;
+  color: #ecf0f1;
+  text-shadow: 2px 2px 4px #000000;
+  font-family: 'Cherry Swash', cursive;
+}
+
+span {
+  color: #ecf0f1;
+}
+
+/* Keep this at the end. */
+@media only screen and (max-width: 600px) {
+  .decor {
+    padding: 3px;
+  }
+  
+  .wrap {
+    width: 100%;
+    margin-top: 0px;
+  }
+  
+   li {
+    float: none;
+  }
+  
+  ul.primary li:hover a {
+    background: none;
+    color: #8B8B8B;
+    text-shadow: 1px 1px #000;
+  }
+
+  ul.primary li:hover ul {
+    display: block;
+    background: #272727;
+    color: #fff;
+  }
+  
+  ul.sub {
+    display: block;  
+    position: static;
+    box-shadow: none;
+    width: 100%;
+  }
+  
+  ul.sub li a {
+    background: #272727;
+    border: none;
+    color: #8B8B8B;
+  }
+  
+  ul.sub li a:hover {
+    color: #ccc;
+    background: none;
+  }
+}
