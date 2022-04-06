@@ -3,31 +3,33 @@
   <table class="default js-sort-table">
     <thead>
         <tr>
-          <th rowspan="2" class="js-sort-number">ID</th>
-          <th colspan="2">Student</th>
-          <th colspan="2">Instructor</th>
-          <th rowspan="2">Skill</th>
-          <th rowspan="2">Group</th>
-          <th rowspan="2">Type</th>
-          <th rowspan="2" class="js-sort-date">Date</th>
-          <tr>
-              <th>LastName</th>
-              <th>FirstName</th>
-              <th>LastName</th>
-              <th>FirstName</th>
-          </tr>
+          <th class="js-sort-number">ID</th>
+          <th>Last Name (Student)</th>
+          <th>First Name (Student)</th>
+          <th>Last Name (Instructor)</th>
+          <th>First Name (Instructor)</th>
+          <th>Skill</th>
+          <th>Group</th>
+          <th>Type</th>
+          <th class="js-sort-date">Date</th>
+          <th>Edit</th>
+          <th>Delete</th>
         </tr>
     </thead>
     <tbody>
       {{ range . }}
       <tr>
         <td>{{ .Id }}</td>
-        <td> {{ .Name }} </td>
-        <td>{{ .Class }}</td>
-        <td>{{ .Enabled }} </td> 
-        <td><a href="/showgroup?id={{ .Id }}">View</a></td>
-        <td><a href="/editgroup?id={{ .Id }}">Edit</a></td>
-        <td><a href="/deletegroup?id={{ .Id }}">Delete</a></td>
+        <td>{{ .Slastname }}</td>  
+        <td>{{ .Sfirstname }}</td>
+        <td>{{ .Ilastname }}</td>
+        <td>{{ .Ifirstname }}</td>
+        <td>{{ .Skillname }}</td>
+        <td>{{ .Groupname }}</td>
+        <td>{{ .Signofftype }}</td>
+        <td>{{ .Signoffdate }}</td>
+        <td><a href="/editsignoff?id={{ .Id }}">Edit</a></td>
+        <td><a href="/deletesignoff?id={{ .Id }}">Delete</a></td>            
       </tr>
       {{ end }}
     </tbody>

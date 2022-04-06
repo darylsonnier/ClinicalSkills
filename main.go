@@ -83,7 +83,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	RefreshToken(w, r)
-	if !HasPermission(r, "admin") {
+	if !HasPermission(r, "instructor") {
 		return
 	}
 
@@ -167,11 +167,63 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		cred.Enabled = enabled
 		ures = append(ures, cred)
 	}
-	tmpl = template.Must(template.ParseGlob("form/*"))
+
+	signoffdata := struct {
+		Id          int
+		Slastname   string
+		Sfirstname  string
+		Ilastname   string
+		Ifirstname  string
+		Skillname   string
+		Groupname   string
+		Signofftype string
+		Signoffdate string
+	}{}
+	snres := []struct {
+		Id          int
+		Slastname   string
+		Sfirstname  string
+		Ilastname   string
+		Ifirstname  string
+		Skillname   string
+		Groupname   string
+		Signofftype string
+		Signoffdate string
+	}{}
+	rows, err = db.Query(`
+		select signoffs.id as id, student.lastname as student_lastname, student.firstname as student_firstname, instructor.lastname as instuctor_lastname, 
+		instructor.firstname as instructor_firstname, skills.name as skillname, skillgroups.name as groupname, signofftype, signoffdate 
+		from signoffs 
+		join users as student on signoffs.studentid=student.id
+		join users as instructor on signoffs.instructorid=instructor.id
+		join skills on signoffs.skillid=skills.id
+		join skillgroups on skills.groupid=skillgroups.id
+	`)
+	if err != nil {
+		panic(err.Error())
+	}
+	for rows.Next() {
+		var id int
+		var student_lastname, student_firstname, instructor_lastname, instructor_firstname, skillname, groupname, signofftype, signoffdate string
+		err = rows.Scan(&id, &student_lastname, &student_firstname, &instructor_lastname, &instructor_firstname, &skillname, &groupname, &signofftype, &signoffdate)
+		if err != nil {
+			panic(err.Error())
+		}
+		signoffdata.Id = id
+		signoffdata.Slastname = student_lastname
+		signoffdata.Sfirstname = student_firstname
+		signoffdata.Ilastname = instructor_lastname
+		signoffdata.Ifirstname = instructor_firstname
+		signoffdata.Skillname = skillname
+		signoffdata.Groupname = groupname
+		signoffdata.Signofftype = signofftype
+		signoffdata.Signoffdate = signoffdate
+		snres = append(snres, signoffdata)
+	}
 	tmpl.ExecuteTemplate(w, "Groups", res)
 	tmpl.ExecuteTemplate(w, "Skills", sres)
 	tmpl.ExecuteTemplate(w, "Users", ures)
-	tmpl.ExecuteTemplate(w, "Signoffs", nil)
+	tmpl.ExecuteTemplate(w, "Signoffs", snres)
 	defer db.Close()
 }
 
@@ -633,6 +685,7 @@ var users = map[string]string{}
 //"user2": "password2",}
 
 func GetCredentials() []Credentials {
+	tmpl = template.Must(template.ParseGlob("form/*"))
 	db := dbConn()
 	// Load users from database
 	rows, err := db.Query("SELECT * FROM users")
