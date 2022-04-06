@@ -77,13 +77,16 @@ func dbConn() (db *sql.DB) {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL)
 	if !CheckSession(w, r) {
 		log.Println("Cookie check failed.")
 		Login(w, r)
 		return
 	}
 	RefreshToken(w, r)
+	if !HasPermission(r, "admin") {
+		return
+	}
+
 	db := dbConn()
 	// Load and display skill groups
 	rows, err := db.Query("SELECT * FROM skillgroups")
@@ -165,10 +168,50 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		ures = append(ures, cred)
 	}
 	tmpl = template.Must(template.ParseGlob("form/*"))
-	tmpl.ExecuteTemplate(w, "Index", res)
-	tmpl.ExecuteTemplate(w, "Index2", sres)
-	tmpl.ExecuteTemplate(w, "Index3", ures)
+	tmpl.ExecuteTemplate(w, "Groups", res)
+	tmpl.ExecuteTemplate(w, "Skills", sres)
+	tmpl.ExecuteTemplate(w, "Users", ures)
+	tmpl.ExecuteTemplate(w, "Signoffs", nil)
 	defer db.Close()
+}
+
+func HasPermission(r *http.Request, req string) bool {
+	var creds = GetCredentials()
+	c, err := r.Cookie("token")
+	tknStr := c.Value
+	claims := &Claims{}
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return false
+		}
+		return false
+	}
+	if !tkn.Valid {
+		return false
+	}
+
+	var role string
+	for i := 0; i < len(creds); i++ {
+		if creds[i].Email == claims.Email {
+			role = creds[i].Userrole
+		}
+	}
+	if req == "admin" {
+		if role != "admin" {
+			log.Printf("Unauthorized attempt by %s to access admin level page.", claims.Email)
+			return false
+		}
+	}
+	if req == "instructor" {
+		if role != "admin" && role != "instructor" {
+			log.Printf("Unauthorized attempt by %s to access instructor level page.", claims.Email)
+			return false
+		}
+	}
+	return true
 }
 
 func ShowGroup(w http.ResponseWriter, r *http.Request) {
@@ -205,12 +248,18 @@ func NewGroup(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
 	tmpl.ExecuteTemplate(w, "NewGroup", nil)
 }
 
 func EditGroup(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "admin") {
 		return
 	}
 	db := dbConn()
@@ -241,6 +290,9 @@ func InsertGroup(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
 	db := dbConn()
 	if r.Method == "POST" {
 		name := r.FormValue("name")
@@ -260,6 +312,9 @@ func InsertGroup(w http.ResponseWriter, r *http.Request) {
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "admin") {
 		return
 	}
 	db := dbConn()
@@ -282,6 +337,9 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "admin") {
 		return
 	}
 	db := dbConn()
@@ -331,6 +389,9 @@ func NewSkill(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
 	db := dbConn()
 	// Load and display skill groups
 	rows, err := db.Query("SELECT * FROM skillgroups")
@@ -358,6 +419,9 @@ func NewSkill(w http.ResponseWriter, r *http.Request) {
 func EditSkill(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "admin") {
 		return
 	}
 	db := dbConn()
@@ -413,6 +477,9 @@ func InsertSkill(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
 	db := dbConn()
 	if r.Method == "POST" {
 		name := r.FormValue("name")
@@ -432,6 +499,9 @@ func InsertSkill(w http.ResponseWriter, r *http.Request) {
 func UpdateSkill(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "admin") {
 		return
 	}
 	db := dbConn()
@@ -456,6 +526,9 @@ func UpdateSkill(w http.ResponseWriter, r *http.Request) {
 func DeleteSkill(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "admin") {
 		return
 	}
 	db := dbConn()
@@ -539,6 +612,9 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	var webusers = GetCredentials()
 	for i := 0; i < len(webusers); i++ {
 		webusers[i].Password = "It's a secret to everybody!"
+	}
+	if !HasPermission(r, "instructor") {
+		return
 	}
 	jsonBytes, err := json.Marshal(webusers)
 	if err != nil {
@@ -765,6 +841,9 @@ func NewUser(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
 	tmpl.ExecuteTemplate(w, "NewUser", nil)
 }
 
@@ -772,6 +851,9 @@ func ShowUser(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL.Path)
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "instructor") {
 		return
 	}
 	db := dbConn()
@@ -807,6 +889,9 @@ func EditUser(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
 	db := dbConn()
 	nId := r.URL.Query().Get("id")
 	rows, err := db.Query("SELECT * FROM users WHERE id=?", nId)
@@ -840,6 +925,31 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
+	db := dbConn()
+	if r.Method == "POST" {
+		userrole := r.FormValue("userrole")
+		lastname := r.FormValue("lastname")
+		firstname := r.FormValue("firstname")
+		email := r.FormValue("email")
+		password := r.FormValue("password")
+		cohort := r.FormValue("cohort")
+		enabled := "True"
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatal(err)
+		}
+		insForm, err := db.Prepare("INSERT INTO users(userrole, lastname, firstname, email, password, cohort, enabled) VALUES(?,?,?,?,?,?,?)")
+		if err != nil {
+			panic(err.Error())
+		}
+		insForm.Exec(userrole, lastname, firstname, email, hash, cohort, enabled)
+		log.Println("INSERT: User: " + lastname + ", " + firstname)
+	}
+	defer db.Close()
+	http.Redirect(w, r, "/", 301)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -847,11 +957,56 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
+	if !HasPermission(r, "admin") {
+		return
+	}
+	db := dbConn()
+	if r.Method == "POST" {
+		id := r.FormValue("uid")
+		userrole := r.FormValue("userrole")
+		lastname := r.FormValue("lastname")
+		firstname := r.FormValue("firstname")
+		email := r.FormValue("email")
+		oldemail := r.FormValue("oldemail")
+		password := r.FormValue("password")
+		cohort := r.FormValue("cohort")
+		enabled := "True"
+		checked := r.FormValue("updatepw")
+		log.Println(checked)
+		if checked == "checked" {
+			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			insForm, err := db.Prepare("UPDATE users SET userrole=?, lastname=?, firstname=?, email=?, password=?, cohort=?, enabled=? WHERE id=?")
+			if err != nil {
+				panic(err.Error())
+			}
+			insForm.Exec(userrole, lastname, firstname, email, hash, cohort, enabled, id)
+			delete(users, oldemail)
+			users[email] = string(hash[:])
+			log.Println("UPDATE: User: " + lastname + ", " + firstname)
+		} else {
+			Password := users[oldemail]
+			delete(users, oldemail)
+			users[email] = Password
+			insForm, err := db.Prepare("UPDATE users SET userrole=?, lastname=?, firstname=?, email=?, cohort=?, enabled=? WHERE id=?")
+			if err != nil {
+				panic(err.Error())
+			}
+			insForm.Exec(userrole, lastname, firstname, email, cohort, enabled, id)
+			log.Println("UPDATE: User: " + lastname + ", " + firstname)
+
+		}
+
+	}
+	defer db.Close()
+	http.Redirect(w, r, "/", 301)
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
 		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "admin") {
 		return
 	}
 }
@@ -919,9 +1074,9 @@ func main() {
 	http.HandleFunc("/showuser", ShowUser)
 	http.HandleFunc("/newuser", NewUser)
 	http.HandleFunc("/edituser", EditUser)
-	http.HandleFunc("/insertuser", InsertSkill)
-	http.HandleFunc("/updateuser", UpdateSkill)
-	http.HandleFunc("/deleteuser", DeleteSkill)
+	http.HandleFunc("/insertuser", InsertUser)
+	http.HandleFunc("/updateuser", UpdateUser)
+	http.HandleFunc("/deleteuser", DeleteUser)
 
 	http.HandleFunc("/getgroups", GetSkillGroups)
 	http.HandleFunc("/getskills", GetSkills)

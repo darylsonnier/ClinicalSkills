@@ -1,0 +1,36 @@
+{{ define "Signoffs" }}
+  <h2 id="signoffs"> Signoffs </h2>
+  <table class="default js-sort-table">
+    <thead>
+        <tr>
+          <th rowspan="2" class="js-sort-number">ID</th>
+          <th colspan="2">Student</th>
+          <th colspan="2">Instructor</th>
+          <th rowspan="2">Skill</th>
+          <th rowspan="2">Group</th>
+          <th rowspan="2">Type</th>
+          <th rowspan="2" class="js-sort-date">Date</th>
+          <tr>
+              <th>LastName</th>
+              <th>FirstName</th>
+              <th>LastName</th>
+              <th>FirstName</th>
+          </tr>
+        </tr>
+    </thead>
+    <tbody>
+      {{ range . }}
+      <tr>
+        <td>{{ .Id }}</td>
+        <td> {{ .Name }} </td>
+        <td>{{ .Class }}</td>
+        <td>{{ .Enabled }} </td> 
+        <td><a href="/showgroup?id={{ .Id }}">View</a></td>
+        <td><a href="/editgroup?id={{ .Id }}">Edit</a></td>
+        <td><a href="/deletegroup?id={{ .Id }}">Delete</a></td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>  
+  {{ template "Footer" }}
+{{ end }}
