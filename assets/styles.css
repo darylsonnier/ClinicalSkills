@@ -54,11 +54,12 @@ body {
   display: inline-block;
 }
 
-nav a {
+nav li a {
   text-decoration: none;
   color: #ffffff;
   display: block;
   font-weight: bold;
+  transition: 0.4s;
 }
 
 ul {
@@ -85,7 +86,7 @@ ul:after {
 
 /* prime */
 ul.primary li a {
-  display: block;
+  /*display: block;*/
   padding: 10px 0px 10px 0px;
   text-align: center;
 }
@@ -126,6 +127,7 @@ ul.sub li a:hover {
 /* sub display*/
 ul.primary li:hover ul {
   display: block;
+  transition: 0.3s;
 }
 
 ul.primary li:hover a {
@@ -198,10 +200,12 @@ table.default th, table.default td {
 
 table.default tr:hover:nth-child(even) {
   background-color: rgb(69, 103, 153);
+  transition: 0.3s;
 }
 
 table.default tr:hover:nth-child(odd) {
   background-color: rgb(36, 151, 61);
+  transition: 0.3s;
 }
 
 header,

@@ -1,17 +1,21 @@
 {{ define "ShowSkill" }}
   {{ template "Header" }}
     {{ template "Menu"  }}
-      <h2> Skill {{ .Id }} </h2>
+      <h2> Skill {{ .Skillname }} </h2>
       <table class="blueTable">
         <tr bold>
+          <th>ID</th>
           <th>Name</th>
-          <th>Group</th>
+          <th>Group ID</th>
+          <th>Group Name</th>
           <th>Enabled</th>
           <th>Action</th>
         </tr>
         <tr>
-          <td>{{ .Name }}</td>
-          <td>{{ .GroupId }}</td>
+          <td>{{ .Id }}</td>
+          <td>{{ .Skillname }}</td>
+          <td>{{ .Groupid }}</td>
+          <td>{{ .Groupname }}</td>
           <td>{{ .Enabled }}</td>
           <td><a href="/editskill?id={{ .Id }}">Edit</a></td>
         </tr>

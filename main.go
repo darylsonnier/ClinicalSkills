@@ -266,6 +266,33 @@ func HasPermission(r *http.Request, req string) bool {
 	return true
 }
 
+func GetRequester(r *http.Request) int {
+	var creds = GetCredentials()
+	c, err := r.Cookie("token")
+	tknStr := c.Value
+	claims := &Claims{}
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return -1
+		}
+		return -1
+	}
+	if !tkn.Valid {
+		return -1
+	}
+
+	id := -1
+	for i := 0; i < len(creds); i++ {
+		if creds[i].Email == claims.Email {
+			id = creds[i].Id
+		}
+	}
+	return id
+}
+
 func ShowGroup(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL.Path)
 	if !CheckSession(w, r) {
@@ -415,24 +442,31 @@ func ShowSkill(w http.ResponseWriter, r *http.Request) {
 	}
 	db := dbConn()
 	nId := r.URL.Query().Get("id")
-	rows, err := db.Query("SELECT * FROM skills WHERE id=?", nId)
+	rows, err := db.Query("select s.id, s.name as skillname, groupid, g.name as groupname, s.enabled from skills as s join skillgroups as g on s.groupid=g.id WHERE s.id=?", nId)
 	if err != nil {
 		panic(err.Error())
 	}
-	skill := Skill{}
+	skilldata := struct {
+		Id        int
+		Skillname string
+		Groupid   int
+		Groupname string
+		Enabled   string
+	}{}
 	for rows.Next() {
 		var id, groupid int
-		var name, enabled string
-		err = rows.Scan(&id, &name, &groupid, &enabled)
+		var skillname, groupname, enabled string
+		err = rows.Scan(&id, &skillname, &groupid, &groupname, &enabled)
 		if err != nil {
 			panic(err.Error())
 		}
-		skill.Id = id
-		skill.Name = name
-		skill.GroupId = groupid
-		skill.Enabled = enabled
+		skilldata.Id = id
+		skilldata.Skillname = skillname
+		skilldata.Groupid = groupid
+		skilldata.Groupname = groupname
+		skilldata.Enabled = enabled
 	}
-	tmpl.ExecuteTemplate(w, "ShowSkill", skill)
+	tmpl.ExecuteTemplate(w, "ShowSkill", skilldata)
 	defer db.Close()
 }
 
@@ -660,15 +694,96 @@ func GetSkills(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-func GetUsers(w http.ResponseWriter, r *http.Request) {
+func GetStudents(w http.ResponseWriter, r *http.Request) {
 	var webusers = GetCredentials()
+	var students []Credentials
 	for i := 0; i < len(webusers); i++ {
 		webusers[i].Password = "It's a secret to everybody!"
+		if webusers[i].Userrole == "student" {
+			students = append(students, webusers[i])
+		}
 	}
 	if !HasPermission(r, "instructor") {
 		return
 	}
-	jsonBytes, err := json.Marshal(webusers)
+	jsonBytes, err := json.Marshal(students)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	w.Header().Add("content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBytes)
+}
+
+func GetSignoffsByID(w http.ResponseWriter, r *http.Request) {
+	if !CheckSession(w, r) {
+		Login(w, r)
+		return
+	}
+	isAdmin := false
+	if HasPermission(r, "admin") || HasPermission(r, "instructor") {
+		log.Println("Instructor access approved.")
+		isAdmin = true
+	}
+	currentuser := GetRequester(r)
+	uid := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(uid)
+	if err != nil {
+		panic(err)
+	}
+	log.Println(id)
+	if !isAdmin && id != currentuser {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	db := dbConn()
+	// Load signoffs
+	signoffdata := struct {
+		Id          int
+		Signofftype string
+		Signofdate  string
+		Ilastname   string
+		Ifirstname  string
+		Skillname   string
+		Groupname   string
+	}{}
+	sres := []struct {
+		Id          int
+		Signofftype string
+		Signofdate  string
+		Ilastname   string
+		Ifirstname  string
+		Skillname   string
+		Groupname   string
+	}{}
+	rows, err := db.Query(`select signoffs.id as sid, signofftype, signoffdate, instructor.lastname as ilastname, instructor.firstname as ifirstname, skills.name as skillname, skillgroups.name as groupname
+	from signoffs 
+	join users as student on signoffs.studentid=student.id
+	join users as instructor on signoffs.instructorid=instructor.id 
+	join skills on signoffs.skillid=skills.id
+	join skillgroups on skills.groupid=skillgroups.id
+	where student.id=?`, id)
+	if err != nil {
+		panic(err.Error())
+	}
+	for rows.Next() {
+		var sid int
+		var signofftype, signoffdate, ilastname, ifirstname, skillname, groupname string
+		err = rows.Scan(&sid, &signofftype, &signoffdate, &ilastname, &ifirstname, &skillname, &groupname)
+		if err != nil {
+			panic(err.Error())
+		}
+		signoffdata.Id = sid
+		signoffdata.Signofftype = signofftype
+		signoffdata.Signofdate = signoffdate
+		signoffdata.Skillname = skillname
+		signoffdata.Ilastname = ilastname
+		signoffdata.Ifirstname = ifirstname
+		signoffdata.Groupname = groupname
+		sres = append(sres, signoffdata)
+	}
+	jsonBytes, err := json.Marshal(sres)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -1133,9 +1248,8 @@ func main() {
 
 	http.HandleFunc("/getgroups", GetSkillGroups)
 	http.HandleFunc("/getskills", GetSkills)
-	http.HandleFunc("/getusers", GetUsers)
-
-	http.HandleFunc("/listskills", ListSkills)
+	http.HandleFunc("/getusers", GetStudents)
+	http.HandleFunc("/getsignoffsbyid", GetSignoffsByID)
 
 	http.HandleFunc("/login", Login)
 	http.HandleFunc("/signin", Signin)
