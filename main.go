@@ -57,6 +57,7 @@ type Credentials struct {
 
 type Claims struct {
 	Email string `json:"email"`
+	//Role  string `json:"role"`
 	jwt.StandardClaims
 }
 
@@ -84,6 +85,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	}
 	RefreshToken(w, r)
 	if !HasPermission(r, "instructor") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 
@@ -370,6 +372,7 @@ func InsertGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -377,11 +380,11 @@ func InsertGroup(w http.ResponseWriter, r *http.Request) {
 		name := r.FormValue("name")
 		class := r.FormValue("class")
 		enabled := r.FormValue("enabled")
-		insForm, err := db.Prepare("INSERT INTO skillgroups(name, class, enabled) VALUES(?,?,?)")
+		insertFormData, err := db.Prepare("INSERT INTO skillgroups(name, class, enabled) VALUES(?,?,?)")
 		if err != nil {
 			panic(err.Error())
 		}
-		insForm.Exec(name, class, enabled)
+		insertFormData.Exec(name, class, enabled)
 		log.Println("INSERT: Class: " + class + " | Name: " + name + " | Enabled: " + enabled)
 	}
 	defer db.Close()
@@ -394,6 +397,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -402,11 +406,11 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		class := r.FormValue("class")
 		enabled := r.FormValue("enabled")
 		id := r.FormValue("uid")
-		insForm, err := db.Prepare("UPDATE skillgroups SET name=?, class=?, enabled=? WHERE id=?")
+		insertFormData, err := db.Prepare("UPDATE skillgroups SET name=?, class=?, enabled=? WHERE id=?")
 		if err != nil {
 			panic(err.Error())
 		}
-		insForm.Exec(name, class, enabled, id)
+		insertFormData.Exec(name, class, enabled, id)
 		log.Println("UPDATE: Class: " + class + " | Name: " + name + " | Enabled: " + enabled)
 	}
 	defer db.Close()
@@ -419,6 +423,7 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -476,6 +481,7 @@ func NewSkill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -508,6 +514,7 @@ func EditSkill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -564,6 +571,7 @@ func InsertSkill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -571,11 +579,11 @@ func InsertSkill(w http.ResponseWriter, r *http.Request) {
 		name := r.FormValue("name")
 		groupid := r.FormValue("groupid")
 		enabled := r.FormValue("enabled")
-		insForm, err := db.Prepare("INSERT INTO skills(name, groupid, enabled) VALUES(?,?,?)")
+		insertFormData, err := db.Prepare("INSERT INTO skills(name, groupid, enabled) VALUES(?,?,?)")
 		if err != nil {
 			panic(err.Error())
 		}
-		insForm.Exec(name, groupid, enabled)
+		insertFormData.Exec(name, groupid, enabled)
 		log.Println("INSERT: Class: " + groupid + " | Name: " + name + " | Enabled: " + enabled)
 	}
 	defer db.Close()
@@ -588,6 +596,7 @@ func UpdateSkill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -596,13 +605,13 @@ func UpdateSkill(w http.ResponseWriter, r *http.Request) {
 		groupid := r.FormValue("groupid")
 		enabled := r.FormValue("enabled")
 		id := r.FormValue("uid")
-		insForm, err := db.Prepare("UPDATE skills SET name=?, groupid=?, enabled=? WHERE id=?")
+		insertFormData, err := db.Prepare("UPDATE skills SET name=?, groupid=?, enabled=? WHERE id=?")
 		if err != nil {
 			panic(err.Error())
 		}
 		gid, _ := strconv.Atoi(groupid)
 		gid = gid + 1
-		insForm.Exec(name, gid, enabled, id)
+		insertFormData.Exec(name, gid, enabled, id)
 		log.Println("UPDATE: Groupid: " + groupid + " | Name: " + name + " | Enabled: " + enabled)
 	}
 	defer db.Close()
@@ -615,6 +624,7 @@ func DeleteSkill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !HasPermission(r, "admin") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	db := dbConn()
@@ -704,6 +714,7 @@ func GetStudents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !HasPermission(r, "instructor") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
 	}
 	jsonBytes, err := json.Marshal(students)
@@ -791,6 +802,73 @@ func GetSignoffsByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonBytes)
+}
+
+func SignoffStudent(w http.ResponseWriter, r *http.Request) {
+	if !CheckSession(w, r) {
+		Login(w, r)
+		return
+	}
+	if !HasPermission(r, "instructor") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
+		return
+	}
+	var creds = GetCredentials()
+	c, err := r.Cookie("token")
+	tknStr := c.Value
+	claims := &Claims{}
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return
+		}
+		return
+	}
+	if !tkn.Valid {
+		return
+	}
+
+	var instructorid int
+	for i := 0; i < len(creds); i++ {
+		if creds[i].Email == claims.Email {
+			instructorid = creds[i].Id
+		}
+	}
+
+	db := dbConn()
+	var result sql.Result
+	if r.Method == "POST" {
+		sid := r.FormValue("studentid")
+		studentid, err := strconv.Atoi(sid)
+		if err != nil {
+			panic(err)
+		}
+		sid = r.FormValue("skillid")
+		skillid, err := strconv.Atoi(sid)
+		if err != nil {
+			panic(err)
+		}
+		signofftype := r.FormValue("signofftype")
+		now := time.Now()
+
+		insertFormData, err := db.Prepare("INSERT INTO signoffs(studentid, instructorid, skillid, signofftype, signoffdate) VALUES(?,?,?,?,?)")
+		if err != nil {
+			panic(err.Error())
+		}
+		result, err = insertFormData.Exec(studentid, instructorid, skillid, signofftype, now)
+		if err != nil {
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+		} else {
+			w.WriteHeader(http.StatusAccepted)
+		}
+
+		log.Println("INSERT Signoff - StudentID: " + strconv.Itoa(studentid) + " | InstructorID: " + strconv.Itoa(instructorid) + " | SkillID: " + strconv.Itoa(skillid))
+	}
+	defer db.Close()
+	log.Println(result.RowsAffected())
+	return
 }
 
 var users = map[string]string{}
@@ -1109,11 +1187,11 @@ func InsertUser(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		insForm, err := db.Prepare("INSERT INTO users(userrole, lastname, firstname, email, password, cohort, enabled) VALUES(?,?,?,?,?,?,?)")
+		insertFormData, err := db.Prepare("INSERT INTO users(userrole, lastname, firstname, email, password, cohort, enabled) VALUES(?,?,?,?,?,?,?)")
 		if err != nil {
 			panic(err.Error())
 		}
-		insForm.Exec(userrole, lastname, firstname, email, hash, cohort, enabled)
+		insertFormData.Exec(userrole, lastname, firstname, email, hash, cohort, enabled)
 		log.Println("INSERT: User: " + lastname + ", " + firstname)
 	}
 	defer db.Close()
@@ -1143,11 +1221,11 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		log.Println(checked)
 		if checked == "checked" {
 			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-			insForm, err := db.Prepare("UPDATE users SET userrole=?, lastname=?, firstname=?, email=?, password=?, cohort=?, enabled=? WHERE id=?")
+			insertFormData, err := db.Prepare("UPDATE users SET userrole=?, lastname=?, firstname=?, email=?, password=?, cohort=?, enabled=? WHERE id=?")
 			if err != nil {
 				panic(err.Error())
 			}
-			insForm.Exec(userrole, lastname, firstname, email, hash, cohort, enabled, id)
+			insertFormData.Exec(userrole, lastname, firstname, email, hash, cohort, enabled, id)
 			delete(users, oldemail)
 			users[email] = string(hash[:])
 			log.Println("UPDATE: User: " + lastname + ", " + firstname)
@@ -1155,11 +1233,11 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 			Password := users[oldemail]
 			delete(users, oldemail)
 			users[email] = Password
-			insForm, err := db.Prepare("UPDATE users SET userrole=?, lastname=?, firstname=?, email=?, cohort=?, enabled=? WHERE id=?")
+			insertFormData, err := db.Prepare("UPDATE users SET userrole=?, lastname=?, firstname=?, email=?, cohort=?, enabled=? WHERE id=?")
 			if err != nil {
 				panic(err.Error())
 			}
-			insForm.Exec(userrole, lastname, firstname, email, cohort, enabled, id)
+			insertFormData.Exec(userrole, lastname, firstname, email, cohort, enabled, id)
 			log.Println("UPDATE: User: " + lastname + ", " + firstname)
 
 		}
@@ -1253,6 +1331,7 @@ func main() {
 
 	http.HandleFunc("/login", Login)
 	http.HandleFunc("/signin", Signin)
+	http.HandleFunc("/signoffstudent", SignoffStudent)
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
 	http.ListenAndServe(":80", nil)
 }
