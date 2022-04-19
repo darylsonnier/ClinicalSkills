@@ -1,4 +1,4 @@
-module example.com/greetings
+module ClinicalSkills
 
 go 1.18
 

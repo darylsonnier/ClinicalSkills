@@ -57,13 +57,15 @@ type Credentials struct {
 
 type Claims struct {
 	Email string `json:"email"`
-	//Role  string `json:"role"`
 	jwt.StandardClaims
 }
 
 // JWT
 var jwtKey = []byte("my_secret_key")
 var tmpl = template.Must(template.ParseGlob("form/*"))
+
+// User map
+var users = map[string]string{}
 
 func dbConn() (db *sql.DB) {
 	dbDriver := "mysql"
@@ -78,6 +80,7 @@ func dbConn() (db *sql.DB) {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
 	if !CheckSession(w, r) {
 		log.Println("Cookie check failed.")
 		Login(w, r)
@@ -232,6 +235,9 @@ func Index(w http.ResponseWriter, r *http.Request) {
 func HasPermission(r *http.Request, req string) bool {
 	var creds = GetCredentials()
 	c, err := r.Cookie("token")
+	if err != nil {
+		log.Println("No access")
+	}
 	tknStr := c.Value
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -641,6 +647,11 @@ func DeleteSkill(w http.ResponseWriter, r *http.Request) {
 
 // User Pages
 func GetSkillGroups(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
+
+	if !CheckSession(w, r) {
+		return
+	}
 	db := dbConn()
 	// Load and display skill groups
 	rows, err := db.Query("SELECT * FROM skillgroups")
@@ -673,6 +684,11 @@ func GetSkillGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetSkills(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
+
+	if !CheckSession(w, r) {
+		return
+	}
 	db := dbConn()
 	// Load and display skill groups
 	rows, err := db.Query("SELECT * FROM skills")
@@ -705,6 +721,15 @@ func GetSkills(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStudents(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
+
+	if !CheckSession(w, r) {
+		return
+	}
+	if !HasPermission(r, "instructor") {
+		return
+	}
+
 	var webusers = GetCredentials()
 	var students []Credentials
 	for i := 0; i < len(webusers); i++ {
@@ -713,10 +738,74 @@ func GetStudents(w http.ResponseWriter, r *http.Request) {
 			students = append(students, webusers[i])
 		}
 	}
-	if !HasPermission(r, "instructor") {
-		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
+	jsonBytes, err := json.Marshal(students)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	w.Header().Add("content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBytes)
+}
+
+func GetStudents2(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Add("Access-Control-Max-Age", "3600")
+	w.Header().Add("Access-Control-Allow-Credentials", "true")
+	w.Header().Add("Access-Control-Expose-Headers", "true")
+	w.Header().Add("Exposed-Headers", "set-cookie")
+	w.Header().Add("Debug", "True")
+	var creds Credentials
+	if r.Method == "POST" {
+		creds.Email = r.FormValue("Email")
+		creds.Password = r.FormValue("Password")
+	} else {
+		// If the structure of the body is wrong, return an HTTP error
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	expectedPassword := users[creds.Email]
+	if err := bcrypt.CompareHashAndPassword([]byte(expectedPassword), []byte(creds.Password)); err != nil {
+		log.Println("Password error")
+		return
+	}
+
+	/*if !CheckSession(w, r) {
+		log.Println("Cookie check failed.")
+		Login(w, r)
+		return
+	}*/
+	var webusers = GetCredentials()
+	var students []Credentials
+	for i := 0; i < len(webusers); i++ {
+		webusers[i].Password = "It's a secret to everybody!"
+		if webusers[i].Userrole == "student" {
+			students = append(students, webusers[i])
+		}
+	}
+	/*if !HasPermission(r, "instructor") {
+		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
+		return
+	}*/
+
+	var allcreds = GetCredentials()
+	var role string
+	for i := 0; i < len(allcreds); i++ {
+		if allcreds[i].Email == creds.Email {
+			role = allcreds[i].Userrole
+		}
+	}
+	log.Println(role)
+	if role != "admin" && role != "instructor" {
+		if role != "admin" {
+			log.Printf("Unauthorized attempt by %s to access admin level page.", creds.Email)
+			return
+		}
+	}
+
 	jsonBytes, err := json.Marshal(students)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -871,12 +960,6 @@ func SignoffStudent(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-var users = map[string]string{}
-
-//map[string]string{
-//"user1": "password1",
-//"user2": "password2",}
-
 func GetCredentials() []Credentials {
 	tmpl = template.Must(template.ParseGlob("form/*"))
 	db := dbConn()
@@ -957,50 +1040,52 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	// Set the new token as the users `session_token` cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:    "session_token",
-		Value:   tokenString,
-		Expires: expirationTime,
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		SameSite: http.SameSiteNoneMode,
 	})
 }
 
+func CORSEnabledFunction(w *http.ResponseWriter, r *http.Request) {
+	// Set CORS headers for the preflight request
+	(*w).Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	(*w).Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Set-Cookie, API-Key")
+	(*w).Header().Add("Access-Control-Max-Age", "3600")
+	(*w).Header().Add("Access-Control-Allow-Credentials", "true")
+	(*w).Header().Add("Access-Control-Expose-Headers", "Content-Length, Set-Cookie, API-Key")
+	(*w).Header().Add("Exposed-Headers", "Set-Cookie, Content-Length, API-Key")
+	(*w).Header().Add("Debug", "True")
+}
+
 func Signin(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
+
 	log.Println("Sign in requested.")
 	var creds Credentials
+	log.Println(r.Method)
 	if r.Method == "POST" {
 		creds.Email = r.FormValue("Email")
 		creds.Password = r.FormValue("Password")
 	} else {
 		// If the structure of the body is wrong, return an HTTP error
 		w.WriteHeader(http.StatusBadRequest)
+		// create response binary data
+		data := []byte("Not happenin buddy!") // slice of bytes    // write `data` to response
+		w.Write(data)
+		log.Println("Not happenin' buddy.")
 		return
 	}
-	// Get the JSON body and decode into credentials
-	/*err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		// If the structure of the body is wrong, return an HTTP error
-		//w.WriteHeader(http.StatusBadRequest)
-		//return
-	}*/
 
-	// Get the expected password from our in memory map
-	//expectedPassword, ok := users[creds.Email]
 	expectedPassword := users[creds.Email]
 	if err := bcrypt.CompareHashAndPassword([]byte(expectedPassword), []byte(creds.Password)); err != nil {
-		//w.WriteHeader(http.StatusUnauthorized)
-		//http.Redirect(w, r, "/login", 301)
+		log.Println("Password error")
 		Login(w, r)
 		return
 	}
-	// If a password exists for the given user
-	// AND, if it is the same as the password we received, the we can move ahead
-	// if NOT, then we return an "Unauthorized" status
-	/*if !ok || expectedPassword != creds.Password {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}*/
+
 	log.Println("Password accepted.")
-	// Declare the expiration time of the token
-	// here, we have kept it as 5 minutes
 	expirationTime := time.Now().Add(15 * time.Minute)
 	// Create the JWT claims, which includes the email and expiry time
 	claims := &Claims{
@@ -1024,17 +1109,21 @@ func Signin(w http.ResponseWriter, r *http.Request) {
 	// Finally, we set the client cookie for "token" as the JWT we just generated
 	// we also set an expiry time which is the same as the token itself
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
-		Expires: expirationTime,
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	})
 	log.Println("Cookie set.")
 	//tmpl.ExecuteTemplate(w, "Index", nil)
 	//Index(w, r)
 	http.Redirect(w, r, "/", 301)
+	return
 }
 
 func CheckSession(w http.ResponseWriter, r *http.Request) bool {
+
 	// We can obtain the session token from the requests cookies, which come with every request
 	c, err := r.Cookie("token")
 	if err != nil {
@@ -1296,6 +1385,7 @@ func ListSkills(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "ListSkills", sres)
 	defer db.Close()
 }
+
 func main() {
 	var creds = GetCredentials()
 	for i := 0; i < len(creds); i++ {
@@ -1326,12 +1416,14 @@ func main() {
 
 	http.HandleFunc("/getgroups", GetSkillGroups)
 	http.HandleFunc("/getskills", GetSkills)
-	http.HandleFunc("/getusers", GetStudents)
+	http.HandleFunc("/getstudents", GetStudents)
+	http.HandleFunc("/bob", GetStudents)
 	http.HandleFunc("/getsignoffsbyid", GetSignoffsByID)
 
 	http.HandleFunc("/login", Login)
 	http.HandleFunc("/signin", Signin)
 	http.HandleFunc("/signoffstudent", SignoffStudent)
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
-	http.ListenAndServe(":80", nil)
+	//log.Fatal(http.ListenAndServe(":80", nil))
+	http.ListenAndServeTLS(":9000", "certs\\server.crt", "certs\\server.key", nil)
 }
