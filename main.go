@@ -681,6 +681,7 @@ func GetSkillGroups(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonBytes)
+	defer db.Close()
 }
 
 func GetSkills(w http.ResponseWriter, r *http.Request) {
@@ -718,6 +719,7 @@ func GetSkills(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonBytes)
+	defer db.Close()
 }
 
 func GetStudents(w http.ResponseWriter, r *http.Request) {
@@ -891,6 +893,7 @@ func GetSignoffsByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonBytes)
+	defer db.Close()
 }
 
 func SignoffStudent(w http.ResponseWriter, r *http.Request) {
@@ -987,6 +990,7 @@ func GetCredentials() []Credentials {
 		user.Enabled = enabled
 		dbusers = append(dbusers, user)
 	}
+	defer db.Close()
 	return dbusers
 }
 
@@ -1425,5 +1429,11 @@ func main() {
 	http.HandleFunc("/signoffstudent", SignoffStudent)
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
 	//log.Fatal(http.ListenAndServe(":80", nil))
-	http.ListenAndServeTLS(":9000", "certs\\server.crt", "certs\\server.key", nil)
+	s := &http.Server{
+		ReadTimeout:       1 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		ReadHeaderTimeout: 20 * time.Second,
+		Addr:              ":9000",
+	}
+	s.ListenAndServeTLS("certs\\server.crt", "certs\\server.key")
 }
