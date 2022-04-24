@@ -79,6 +79,314 @@ func dbConn() (db *sql.DB) {
 	return db
 }
 
+func GetCredentials() []Credentials {
+	tmpl = template.Must(template.ParseGlob("form/*"))
+	db := dbConn()
+	// Load users from database
+	rows, err := db.Query("SELECT * FROM users")
+	if err != nil {
+		panic(err.Error())
+	}
+	user := Credentials{}
+	dbusers := []Credentials{}
+	for rows.Next() {
+		var id int
+		var userrole, lastname, firstname, email, password, cohort, enabled string
+		err = rows.Scan(&id, &userrole, &lastname, &firstname, &email, &password, &cohort, &enabled)
+		if err != nil {
+			panic(err.Error())
+		}
+		user.Id = id
+		user.Userrole = userrole
+		user.Lastname = lastname
+		user.Firstname = firstname
+		user.Email = email
+		user.Password = password
+		user.Cohort = cohort
+		user.Enabled = enabled
+		dbusers = append(dbusers, user)
+	}
+	defer db.Close()
+	return dbusers
+}
+
+func Signin(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
+	log.Println(r.Header.Get("Origin"))
+	log.Println("Sign in requested.")
+	var creds Credentials
+	log.Println(r.Method)
+	if r.Method == "POST" {
+		creds.Email = r.FormValue("Email")
+		creds.Password = r.FormValue("Password")
+	} else {
+		// If the structure of the body is wrong, return an HTTP error
+		w.WriteHeader(http.StatusBadRequest)
+		// create response binary data
+		data := []byte("Not happenin buddy!") // slice of bytes    // write `data` to response
+		w.Write(data)
+		log.Println("Not happenin' buddy.")
+		return
+	}
+
+	expectedPassword := users[creds.Email]
+	if err := bcrypt.CompareHashAndPassword([]byte(expectedPassword), []byte(creds.Password)); err != nil {
+		log.Println("Password error")
+		Login(w, r)
+		return
+	}
+
+	log.Println("Password accepted.")
+	expirationTime := time.Now().Add(5 * time.Minute)
+	// Create the JWT claims, which includes the email and expiry time
+	claims := &Claims{
+		Email: creds.Email,
+		StandardClaims: jwt.StandardClaims{
+			// In JWT, the expiry time is expressed as unix milliseconds
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+
+	// Declare the token with the algorithm used for signing, and the claims
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// Create the JWT string
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		// If there is an error in creating the JWT return an internal server error
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Finally, we set the client cookie for "token" as the JWT we just generated
+	// we also set an expiry time which is the same as the token itself
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+	})
+
+	// Set user role cookie.
+	var cookieRole string
+	everyone := GetCredentials()
+	for i := 0; i < len(everyone); i++ {
+		if everyone[i].Email == claims.Email {
+			cookieRole = everyone[i].Userrole
+		}
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "role",
+		Value:    cookieRole,
+		Expires:  expirationTime,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+	})
+
+	log.Println("Cookie set.")
+	//tmpl.ExecuteTemplate(w, "Index", nil)
+	//Index(w, r)
+	if r.Header.Get("Origin") != "http://demoschool.edu:3000" {
+		http.Redirect(w, r, "/", 301)
+	}
+	return
+}
+
+func CheckSession(w http.ResponseWriter, r *http.Request) bool {
+	CORSEnabledFunction(&w, r)
+	// We can obtain the session token from the requests cookies, which come with every request
+	c, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			// If the cookie is not set, return an unauthorized status
+			w.WriteHeader(http.StatusUnauthorized)
+			return false
+		}
+		// For any other type of error, return a bad request status
+		w.WriteHeader(http.StatusBadRequest)
+		return false
+	}
+
+	// Get the JWT string from the cookie
+	tknStr := c.Value
+
+	// Initialize a new instance of `Claims`
+	claims := &Claims{}
+
+	// Parse the JWT string and store the result in `claims`.
+	// Note that we are passing the key in this method as well. This method will return an error
+	// if the token is invalid (if it has expired according to the expiry time we set on sign in),
+	// or if the signature does not match
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			w.WriteHeader(http.StatusUnauthorized)
+			return false
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return false
+	}
+	if !tkn.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+	// Finally, return the welcome message to the user, along with their
+	// email given in the token
+	return true
+}
+
+func RefreshToken(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
+	// (BEGIN) The code uptil this point is the same as the first part of the `Welcome` route
+	c, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	tknStr := c.Value
+	claims := &Claims{}
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if !tkn.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.WriteHeader(http.StatusAlreadyReported)
+		return
+	}
+	// (END) The code uptil this point is the same as the first part of the `Welcome` route
+
+	// We ensure that a new token is not issued until enough time has elapsed
+	// In this case, a new token will only be issued if the old token is within
+	// 30 seconds of expiry. Otherwise, return a bad request status
+	if time.Unix(claims.ExpiresAt, 0).Sub(time.Now()) > 30*time.Second {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Now, create a new token for the current use, with a renewed expiration time
+	expirationTime := time.Now().Add(5 * time.Minute)
+	claims.ExpiresAt = expirationTime.Unix()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Set the new token as the users `session_token` cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		SameSite: http.SameSiteNoneMode,
+	})
+	w.WriteHeader(http.StatusAccepted)
+	log.Println("Refreshed token.")
+	return
+}
+
+func CORSEnabledFunction(w *http.ResponseWriter, r *http.Request) {
+	// Set CORS headers for the preflight request
+	//(*w).Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	//(*w).Header().Set("Access-Control-Allow-Origin", "http://10.1.0.195:3000")
+	//(*w).Header().Set("Access-Control-Allow-Origin", "http://192.168.0.101:3000")
+	(*w).Header().Set("Access-Control-Allow-Origin", "https://demoschool.edu:3000")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Set-Cookie, API-Key")
+	(*w).Header().Set("Access-Control-Max-Age", "3600")
+	(*w).Header().Set("Access-Control-Allow-Credentials", "true")
+	(*w).Header().Set("Access-Control-Expose-Headers", "Content-Length, Set-Cookie, API-Key")
+	(*w).Header().Set("Exposed-Headers", "Set-Cookie, Content-Length, API-Key")
+}
+
+func HasPermission(r *http.Request, req string) bool {
+	var creds = GetCredentials()
+	c, err := r.Cookie("token")
+	if err != nil {
+		log.Println("No access")
+	}
+	tknStr := c.Value
+	claims := &Claims{}
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return false
+		}
+		return false
+	}
+	if !tkn.Valid {
+		return false
+	}
+
+	var role string
+	for i := 0; i < len(creds); i++ {
+		if creds[i].Email == claims.Email {
+			role = creds[i].Userrole
+		}
+	}
+	if req == "admin" {
+		if role != "admin" {
+			log.Printf("Unauthorized attempt by %s to access admin level page.", claims.Email)
+			return false
+		}
+	}
+	if req == "instructor" {
+		if role != "admin" && role != "instructor" {
+			log.Printf("Unauthorized attempt by %s to access instructor level page.", claims.Email)
+			return false
+		}
+	}
+	return true
+}
+
+func GetRequester(r *http.Request) int {
+	var creds = GetCredentials()
+	c, err := r.Cookie("token")
+	tknStr := c.Value
+	claims := &Claims{}
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return -1
+		}
+		return -1
+	}
+	if !tkn.Valid {
+		return -1
+	}
+
+	id := -1
+	for i := 0; i < len(creds); i++ {
+		if creds[i].Email == claims.Email {
+			id = creds[i].Id
+		}
+	}
+	return id
+}
+
+// Admin pages pages
+func Login(w http.ResponseWriter, r *http.Request) {
+	tmpl.ExecuteTemplate(w, "Login", nil)
+}
+
 func Index(w http.ResponseWriter, r *http.Request) {
 	CORSEnabledFunction(&w, r)
 	if !CheckSession(w, r) {
@@ -232,75 +540,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 }
 
-func HasPermission(r *http.Request, req string) bool {
-	var creds = GetCredentials()
-	c, err := r.Cookie("token")
-	if err != nil {
-		log.Println("No access")
-	}
-	tknStr := c.Value
-	claims := &Claims{}
-	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			return false
-		}
-		return false
-	}
-	if !tkn.Valid {
-		return false
-	}
-
-	var role string
-	for i := 0; i < len(creds); i++ {
-		if creds[i].Email == claims.Email {
-			role = creds[i].Userrole
-		}
-	}
-	if req == "admin" {
-		if role != "admin" {
-			log.Printf("Unauthorized attempt by %s to access admin level page.", claims.Email)
-			return false
-		}
-	}
-	if req == "instructor" {
-		if role != "admin" && role != "instructor" {
-			log.Printf("Unauthorized attempt by %s to access instructor level page.", claims.Email)
-			return false
-		}
-	}
-	return true
-}
-
-func GetRequester(r *http.Request) int {
-	var creds = GetCredentials()
-	c, err := r.Cookie("token")
-	tknStr := c.Value
-	claims := &Claims{}
-	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			return -1
-		}
-		return -1
-	}
-	if !tkn.Valid {
-		return -1
-	}
-
-	id := -1
-	for i := 0; i < len(creds); i++ {
-		if creds[i].Email == claims.Email {
-			id = creds[i].Id
-		}
-	}
-	return id
-}
-
 func ShowGroup(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL.Path)
 	if !CheckSession(w, r) {
@@ -443,8 +682,6 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	http.Redirect(w, r, "/", 301)
 }
-
-// Function handlers for skills
 
 func ShowSkill(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
@@ -645,7 +882,6 @@ func DeleteSkill(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", 301)
 }
 
-// User Pages
 func GetSkillGroups(w http.ResponseWriter, r *http.Request) {
 	CORSEnabledFunction(&w, r)
 
@@ -692,24 +928,39 @@ func GetSkills(w http.ResponseWriter, r *http.Request) {
 	}
 	db := dbConn()
 	// Load and display skill groups
-	rows, err := db.Query("SELECT * FROM skills")
+	// Load and display skills
+	skilldata := struct {
+		Id        int
+		Skillname string
+		Groupid   int
+		Groupname string
+		Enabled   string
+	}{}
+	sres := []struct {
+		Id        int
+		Skillname string
+		Groupid   int
+		Groupname string
+		Enabled   string
+	}{}
+
+	rows, err := db.Query("select s.id, s.name as skillname, groupid, g.name as groupname, s.enabled from skills as s join skillgroups as g on s.groupid=g.id where s.enabled='True'")
 	if err != nil {
 		panic(err.Error())
 	}
-	sgroup := Skill{}
-	sres := []Skill{}
 	for rows.Next() {
 		var id, groupid int
-		var name, enabled string
-		err = rows.Scan(&id, &name, &groupid, &enabled)
+		var skillname, groupname, enabled string
+		err = rows.Scan(&id, &skillname, &groupid, &groupname, &enabled)
 		if err != nil {
 			panic(err.Error())
 		}
-		sgroup.Id = id
-		sgroup.GroupId = groupid
-		sgroup.Name = name
-		sgroup.Enabled = enabled
-		sres = append(sres, sgroup)
+		skilldata.Id = id
+		skilldata.Skillname = skillname
+		skilldata.Groupid = groupid
+		skilldata.Groupname = groupname
+		skilldata.Enabled = enabled
+		sres = append(sres, skilldata)
 	}
 	jsonBytes, err := json.Marshal(sres)
 	if err != nil {
@@ -740,74 +991,6 @@ func GetStudents(w http.ResponseWriter, r *http.Request) {
 			students = append(students, webusers[i])
 		}
 	}
-	jsonBytes, err := json.Marshal(students)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	}
-	w.Header().Add("content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
-}
-
-func GetStudents2(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-	w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Add("Access-Control-Max-Age", "3600")
-	w.Header().Add("Access-Control-Allow-Credentials", "true")
-	w.Header().Add("Access-Control-Expose-Headers", "true")
-	w.Header().Add("Exposed-Headers", "set-cookie")
-	w.Header().Add("Debug", "True")
-	var creds Credentials
-	if r.Method == "POST" {
-		creds.Email = r.FormValue("Email")
-		creds.Password = r.FormValue("Password")
-	} else {
-		// If the structure of the body is wrong, return an HTTP error
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	expectedPassword := users[creds.Email]
-	if err := bcrypt.CompareHashAndPassword([]byte(expectedPassword), []byte(creds.Password)); err != nil {
-		log.Println("Password error")
-		return
-	}
-
-	/*if !CheckSession(w, r) {
-		log.Println("Cookie check failed.")
-		Login(w, r)
-		return
-	}*/
-	var webusers = GetCredentials()
-	var students []Credentials
-	for i := 0; i < len(webusers); i++ {
-		webusers[i].Password = "It's a secret to everybody!"
-		if webusers[i].Userrole == "student" {
-			students = append(students, webusers[i])
-		}
-	}
-	/*if !HasPermission(r, "instructor") {
-		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
-		return
-	}*/
-
-	var allcreds = GetCredentials()
-	var role string
-	for i := 0; i < len(allcreds); i++ {
-		if allcreds[i].Email == creds.Email {
-			role = allcreds[i].Userrole
-		}
-	}
-	log.Println(role)
-	if role != "admin" && role != "instructor" {
-		if role != "admin" {
-			log.Printf("Unauthorized attempt by %s to access admin level page.", creds.Email)
-			return
-		}
-	}
-
 	jsonBytes, err := json.Marshal(students)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -963,216 +1146,154 @@ func SignoffStudent(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func GetCredentials() []Credentials {
-	tmpl = template.Must(template.ParseGlob("form/*"))
-	db := dbConn()
-	// Load users from database
-	rows, err := db.Query("SELECT * FROM users")
-	if err != nil {
-		panic(err.Error())
-	}
-	user := Credentials{}
-	dbusers := []Credentials{}
-	for rows.Next() {
-		var id int
-		var userrole, lastname, firstname, email, password, cohort, enabled string
-		err = rows.Scan(&id, &userrole, &lastname, &firstname, &email, &password, &cohort, &enabled)
-		if err != nil {
-			panic(err.Error())
-		}
-		user.Id = id
-		user.Userrole = userrole
-		user.Lastname = lastname
-		user.Firstname = firstname
-		user.Email = email
-		user.Password = password
-		user.Cohort = cohort
-		user.Enabled = enabled
-		dbusers = append(dbusers, user)
-	}
-	defer db.Close()
-	return dbusers
-}
-
-func RefreshToken(w http.ResponseWriter, r *http.Request) {
-	// (BEGIN) The code uptil this point is the same as the first part of the `Welcome` route
-	c, err := r.Cookie("token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	tknStr := c.Value
-	claims := &Claims{}
-	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if !tkn.Valid {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		w.WriteHeader(http.StatusAlreadyReported)
-		return
-	}
-	// (END) The code uptil this point is the same as the first part of the `Welcome` route
-
-	// We ensure that a new token is not issued until enough time has elapsed
-	// In this case, a new token will only be issued if the old token is within
-	// 30 seconds of expiry. Otherwise, return a bad request status
-	if time.Unix(claims.ExpiresAt, 0).Sub(time.Now()) > 30*time.Second {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Now, create a new token for the current use, with a renewed expiration time
-	expirationTime := time.Now().Add(5 * time.Minute)
-	claims.ExpiresAt = expirationTime.Unix()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Set the new token as the users `session_token` cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    tokenString,
-		Expires:  expirationTime,
-		SameSite: http.SameSiteNoneMode,
-	})
-}
-
-func CORSEnabledFunction(w *http.ResponseWriter, r *http.Request) {
-	// Set CORS headers for the preflight request
-	(*w).Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-	(*w).Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	(*w).Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Set-Cookie, API-Key")
-	(*w).Header().Add("Access-Control-Max-Age", "3600")
-	(*w).Header().Add("Access-Control-Allow-Credentials", "true")
-	(*w).Header().Add("Access-Control-Expose-Headers", "Content-Length, Set-Cookie, API-Key")
-	(*w).Header().Add("Exposed-Headers", "Set-Cookie, Content-Length, API-Key")
-	(*w).Header().Add("Debug", "True")
-}
-
-func Signin(w http.ResponseWriter, r *http.Request) {
-	CORSEnabledFunction(&w, r)
-
-	log.Println("Sign in requested.")
-	var creds Credentials
-	log.Println(r.Method)
-	if r.Method == "POST" {
-		creds.Email = r.FormValue("Email")
-		creds.Password = r.FormValue("Password")
-	} else {
-		// If the structure of the body is wrong, return an HTTP error
-		w.WriteHeader(http.StatusBadRequest)
-		// create response binary data
-		data := []byte("Not happenin buddy!") // slice of bytes    // write `data` to response
-		w.Write(data)
-		log.Println("Not happenin' buddy.")
-		return
-	}
-
-	expectedPassword := users[creds.Email]
-	if err := bcrypt.CompareHashAndPassword([]byte(expectedPassword), []byte(creds.Password)); err != nil {
-		log.Println("Password error")
+func Signoffs(w http.ResponseWriter, r *http.Request) {
+	if !CheckSession(w, r) {
 		Login(w, r)
 		return
 	}
-
-	log.Println("Password accepted.")
-	expirationTime := time.Now().Add(15 * time.Minute)
-	// Create the JWT claims, which includes the email and expiry time
-	claims := &Claims{
-		Email: creds.Email,
-		StandardClaims: jwt.StandardClaims{
-			// In JWT, the expiry time is expressed as unix milliseconds
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
-
-	// Declare the token with the algorithm used for signing, and the claims
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// Create the JWT string
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		// If there is an error in creating the JWT return an internal server error
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Finally, we set the client cookie for "token" as the JWT we just generated
-	// we also set an expiry time which is the same as the token itself
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    tokenString,
-		Expires:  expirationTime,
-		SameSite: http.SameSiteNoneMode,
-		Secure:   true,
-	})
-	log.Println("Cookie set.")
-	//tmpl.ExecuteTemplate(w, "Index", nil)
-	//Index(w, r)
-	http.Redirect(w, r, "/", 301)
-	return
-}
-
-func CheckSession(w http.ResponseWriter, r *http.Request) bool {
-
-	// We can obtain the session token from the requests cookies, which come with every request
+	var creds = GetCredentials()
 	c, err := r.Cookie("token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			// If the cookie is not set, return an unauthorized status
-			w.WriteHeader(http.StatusUnauthorized)
-			return false
-		}
-		// For any other type of error, return a bad request status
-		w.WriteHeader(http.StatusBadRequest)
-		return false
-	}
-
-	// Get the JWT string from the cookie
 	tknStr := c.Value
-
-	// Initialize a new instance of `Claims`
 	claims := &Claims{}
-
-	// Parse the JWT string and store the result in `claims`.
-	// Note that we are passing the key in this method as well. This method will return an error
-	// if the token is invalid (if it has expired according to the expiry time we set on sign in),
-	// or if the signature does not match
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			w.WriteHeader(http.StatusUnauthorized)
-			return false
+			return
 		}
-		w.WriteHeader(http.StatusBadRequest)
-		return false
+		return
 	}
 	if !tkn.Valid {
-		w.WriteHeader(http.StatusUnauthorized)
-		return false
+		return
 	}
-	// Finally, return the welcome message to the user, along with their
-	// email given in the token
-	return true
-}
+	db := dbConn()
+	var userId int
+	var userRole string
+	for i := 0; i < len(creds); i++ {
+		if creds[i].Email == claims.Email {
+			userId = creds[i].Id
+			userRole = creds[i].Userrole
+		}
+	}
 
-func Login(w http.ResponseWriter, r *http.Request) {
-	tmpl.ExecuteTemplate(w, "Login", nil)
+	if userRole == "student" {
+		// Load signoffs
+		signoffdata := struct {
+			Id          int
+			Signofftype string
+			Signofdate  string
+			Ilastname   string
+			Ifirstname  string
+			Skillname   string
+			Groupname   string
+		}{}
+		sres := []struct {
+			Id          int
+			Signofftype string
+			Signofdate  string
+			Ilastname   string
+			Ifirstname  string
+			Skillname   string
+			Groupname   string
+		}{}
+		rows, err := db.Query(`select signoffs.id as sid, signofftype, signoffdate, instructor.lastname as ilastname, instructor.firstname as ifirstname, skills.name as skillname, skillgroups.name as groupname
+		from signoffs 
+		join users as student on signoffs.studentid=student.id
+		join users as instructor on signoffs.instructorid=instructor.id 
+		join skills on signoffs.skillid=skills.id
+		join skillgroups on skills.groupid=skillgroups.id
+		where student.id=?`, userId)
+		if err != nil {
+			panic(err.Error())
+		}
+		for rows.Next() {
+			var sid int
+			var signofftype, signoffdate, ilastname, ifirstname, skillname, groupname string
+			err = rows.Scan(&sid, &signofftype, &signoffdate, &ilastname, &ifirstname, &skillname, &groupname)
+			if err != nil {
+				panic(err.Error())
+			}
+			signoffdata.Id = sid
+			signoffdata.Signofftype = signofftype
+			signoffdata.Signofdate = signoffdate
+			signoffdata.Skillname = skillname
+			signoffdata.Ilastname = ilastname
+			signoffdata.Ifirstname = ifirstname
+			signoffdata.Groupname = groupname
+			sres = append(sres, signoffdata)
+		}
+		jsonBytes, err := json.Marshal(sres)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+		w.Header().Add("content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonBytes)
+	}
+
+	if userRole == "instructor" {
+		// Load signoffs
+		signoffdata := struct {
+			Id          int
+			Signofftype string
+			Signoffdate string
+			Slastname   string
+			Sfirstname  string
+			Ilastname   string
+			Ifirstname  string
+			Skillname   string
+			Groupname   string
+		}{}
+		sres := []struct {
+			Id          int
+			Signofftype string
+			Signoffdate string
+			Slastname   string
+			Sfirstname  string
+			Ilastname   string
+			Ifirstname  string
+			Skillname   string
+			Groupname   string
+		}{}
+		rows, err := db.Query(`select signoffs.id as sid, signofftype, signoffdate, student.lastname as slastname, student.firstname as sfirstname, instructor.lastname as ilastname, instructor.firstname as ifirstname, skills.name as skillname, skillgroups.name as groupname
+		from signoffs 
+		join users as student on signoffs.studentid=student.id
+		join users as instructor on signoffs.instructorid=instructor.id 
+		join skills on signoffs.skillid=skills.id
+		join skillgroups on skills.groupid=skillgroups.id`)
+		if err != nil {
+			panic(err.Error())
+		}
+		for rows.Next() {
+			var sid int
+			var signofftype, signoffdate, slastname, sfirstname, ilastname, ifirstname, skillname, groupname string
+			err = rows.Scan(&sid, &signofftype, &signoffdate, &slastname, &sfirstname, &ilastname, &ifirstname, &skillname, &groupname)
+			if err != nil {
+				panic(err.Error())
+			}
+			signoffdata.Id = sid
+			signoffdata.Signofftype = signofftype
+			signoffdata.Signoffdate = signoffdate
+			signoffdata.Skillname = skillname
+			signoffdata.Slastname = slastname
+			signoffdata.Sfirstname = sfirstname
+			signoffdata.Ilastname = ilastname
+			signoffdata.Ifirstname = ifirstname
+			signoffdata.Groupname = groupname
+			sres = append(sres, signoffdata)
+		}
+		jsonBytes, err := json.Marshal(sres)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+		w.Header().Add("content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonBytes)
+	}
+	defer db.Close()
 }
 
 func NewUser(w http.ResponseWriter, r *http.Request) {
@@ -1421,11 +1542,12 @@ func main() {
 	http.HandleFunc("/getgroups", GetSkillGroups)
 	http.HandleFunc("/getskills", GetSkills)
 	http.HandleFunc("/getstudents", GetStudents)
-	http.HandleFunc("/bob", GetStudents)
 	http.HandleFunc("/getsignoffsbyid", GetSignoffsByID)
+	http.HandleFunc("/getsignoffs", Signoffs)
 
 	http.HandleFunc("/login", Login)
 	http.HandleFunc("/signin", Signin)
+	http.HandleFunc("/refreshtoken", RefreshToken)
 	http.HandleFunc("/signoffstudent", SignoffStudent)
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
 	//log.Fatal(http.ListenAndServe(":80", nil))
@@ -1433,7 +1555,7 @@ func main() {
 		ReadTimeout:       1 * time.Second,
 		WriteTimeout:      10 * time.Second,
 		ReadHeaderTimeout: 20 * time.Second,
-		Addr:              ":9000",
+		Addr:              "demoschool.edu:9000",
 	}
 	s.ListenAndServeTLS("certs\\server.crt", "certs\\server.key")
 }
