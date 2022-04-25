@@ -187,7 +187,7 @@ func Signin(w http.ResponseWriter, r *http.Request) {
 	log.Println("Cookie set.")
 	//tmpl.ExecuteTemplate(w, "Index", nil)
 	//Index(w, r)
-	if r.Header.Get("Origin") != "http://demoschool.edu:3000" {
+	if r.Header.Get("Origin") != "https://demoschool.edu:3000" {
 		http.Redirect(w, r, "/", 301)
 	}
 	return
@@ -1081,13 +1081,19 @@ func GetSignoffsByID(w http.ResponseWriter, r *http.Request) {
 
 func SignoffStudent(w http.ResponseWriter, r *http.Request) {
 	if !CheckSession(w, r) {
-		Login(w, r)
+		log.Println("No token.")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	if !HasPermission(r, "instructor") {
-		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
+		log.Println("Invalid user.")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	log.Println("Signoff")
+	log.Println(r.FormValue("studentid"))
+	log.Println(r.FormValue("skillid"))
+	log.Println(r.FormValue("signofftype"))
 	var creds = GetCredentials()
 	c, err := r.Cookie("token")
 	tknStr := c.Value
@@ -1182,7 +1188,7 @@ func Signoffs(w http.ResponseWriter, r *http.Request) {
 		signoffdata := struct {
 			Id          int
 			Signofftype string
-			Signofdate  string
+			Signoffdate string
 			Ilastname   string
 			Ifirstname  string
 			Skillname   string
@@ -1191,7 +1197,7 @@ func Signoffs(w http.ResponseWriter, r *http.Request) {
 		sres := []struct {
 			Id          int
 			Signofftype string
-			Signofdate  string
+			Signoffdate string
 			Ilastname   string
 			Ifirstname  string
 			Skillname   string
@@ -1216,7 +1222,7 @@ func Signoffs(w http.ResponseWriter, r *http.Request) {
 			}
 			signoffdata.Id = sid
 			signoffdata.Signofftype = signofftype
-			signoffdata.Signofdate = signoffdate
+			signoffdata.Signoffdate = signoffdate
 			signoffdata.Skillname = skillname
 			signoffdata.Ilastname = ilastname
 			signoffdata.Ifirstname = ifirstname
@@ -1233,7 +1239,7 @@ func Signoffs(w http.ResponseWriter, r *http.Request) {
 		w.Write(jsonBytes)
 	}
 
-	if userRole == "instructor" {
+	if userRole == "instructor" || userRole == "admin" {
 		// Load signoffs
 		signoffdata := struct {
 			Id          int
