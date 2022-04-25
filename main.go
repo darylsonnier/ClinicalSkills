@@ -973,25 +973,64 @@ func GetSkills(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 }
 
-func GetStudents(w http.ResponseWriter, r *http.Request) {
+func GetContacts(w http.ResponseWriter, r *http.Request) {
 	CORSEnabledFunction(&w, r)
 
 	if !CheckSession(w, r) {
 		return
 	}
-	if !HasPermission(r, "instructor") {
+
+	var webusers = GetCredentials()
+	var contacts []Credentials
+
+	if HasPermission(r, "instructor") {
+		for i := 0; i < len(webusers); i++ {
+			webusers[i].Password = "It's a secret to everybody!"
+			contacts = append(contacts, webusers[i])
+		}
+	} else {
+		for i := 0; i < len(webusers); i++ {
+			webusers[i].Password = "It's a secret to everybody!"
+			if webusers[i].Userrole == "instructor" {
+				contacts = append(contacts, webusers[i])
+			}
+		}
+	}
+
+	jsonBytes, err := json.Marshal(contacts)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	w.Header().Add("content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBytes)
+}
+
+func GetStudents(w http.ResponseWriter, r *http.Request) {
+	CORSEnabledFunction(&w, r)
+
+	if !CheckSession(w, r) {
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	var webusers = GetCredentials()
-	var students []Credentials
+	var contacts []Credentials
+
+	if !HasPermission(r, "instructor") {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	for i := 0; i < len(webusers); i++ {
 		webusers[i].Password = "It's a secret to everybody!"
 		if webusers[i].Userrole == "student" {
-			students = append(students, webusers[i])
+			contacts = append(contacts, webusers[i])
 		}
 	}
-	jsonBytes, err := json.Marshal(students)
+
+	jsonBytes, err := json.Marshal(contacts)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -1547,6 +1586,7 @@ func main() {
 
 	http.HandleFunc("/getgroups", GetSkillGroups)
 	http.HandleFunc("/getskills", GetSkills)
+	http.HandleFunc("/getcontacts", GetContacts)
 	http.HandleFunc("/getstudents", GetStudents)
 	http.HandleFunc("/getsignoffsbyid", GetSignoffsByID)
 	http.HandleFunc("/getsignoffs", Signoffs)
