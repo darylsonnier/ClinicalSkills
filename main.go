@@ -245,8 +245,10 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == http.ErrNoCookie {
 			w.WriteHeader(http.StatusUnauthorized)
+			log.Println("Not signed in.")
 			return
 		}
+		log.Println(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -257,13 +259,16 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	})
 	if !tkn.Valid {
 		w.WriteHeader(http.StatusUnauthorized)
+		log.Println("Invalid token")
 		return
 	}
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
 			w.WriteHeader(http.StatusUnauthorized)
+			log.Println("Invalid signature in token")
 			return
 		}
+		log.Println("Already reported status")
 		w.WriteHeader(http.StatusAlreadyReported)
 		return
 	}
@@ -274,6 +279,8 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	// 30 seconds of expiry. Otherwise, return a bad request status
 	if time.Unix(claims.ExpiresAt, 0).Sub(time.Now()) > 30*time.Second {
 		w.WriteHeader(http.StatusBadRequest)
+		log.Println(time.Unix(claims.ExpiresAt, 0).Sub(time.Now()))
+		log.Println("Token cannot be refreshed yet")
 		return
 	}
 
@@ -284,6 +291,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Token server error")
 		return
 	}
 
@@ -295,6 +303,23 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteNoneMode,
 	})
 	w.WriteHeader(http.StatusAccepted)
+
+	// Set user role cookie.
+	var cookieRole string
+	everyone := GetCredentials()
+	for i := 0; i < len(everyone); i++ {
+		if everyone[i].Email == claims.Email {
+			cookieRole = everyone[i].Userrole
+		}
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "role",
+		Value:    cookieRole,
+		Expires:  expirationTime,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+	})
 	log.Println("Refreshed token.")
 	return
 }
