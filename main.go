@@ -287,6 +287,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	// Now, create a new token for the current use, with a renewed expiration time
 	expirationTime := time.Now().Add(5 * time.Minute)
 	claims.ExpiresAt = expirationTime.Unix()
+	log.Println(claims.Email)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
@@ -301,8 +302,8 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		Value:    tokenString,
 		Expires:  expirationTime,
 		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	})
-	w.WriteHeader(http.StatusAccepted)
 
 	// Set user role cookie.
 	var cookieRole string
@@ -321,6 +322,8 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 	})
 	log.Println("Refreshed token.")
+	log.Println(cookieRole)
+	log.Println(tokenString)
 	return
 }
 
