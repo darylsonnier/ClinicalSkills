@@ -69,8 +69,8 @@ var users = map[string]string{}
 
 func dbConn() (db *sql.DB) {
 	dbDriver := "mysql"
-	dbUser := "root"
-	dbPass := "Fallout@99"
+	dbUser := "ClinicalAppServer"
+	dbPass := "trustno1"
 	dbName := "clinicalskills"
 	db, err := sql.Open(dbDriver, dbUser+":"+dbPass+"@/"+dbName)
 	if err != nil {
@@ -422,7 +422,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		Login(w, r)
 		return
 	}
-	RefreshToken(w, r)
 	if !HasPermission(r, "instructor") {
 		tmpl.ExecuteTemplate(w, "Unauthorized", nil)
 		return
@@ -1589,7 +1588,7 @@ func main() {
 	for i := 0; i < len(creds); i++ {
 		users[creds[i].Email] = creds[i].Password
 	}
-	log.Println("Server started on: http://localhost")
+	log.Println("Server started on: https://demoschool.edu:9000")
 	http.HandleFunc("/", Index)
 	http.HandleFunc("/showgroup", ShowGroup)
 	http.HandleFunc("/newgroup", NewGroup)

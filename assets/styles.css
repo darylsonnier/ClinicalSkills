@@ -181,6 +181,42 @@ ul.sub li:nth-child(4):hover > a{
   border-radius: 8px;
 } 
 
+ul.sub li:nth-child(5):hover > a{
+  color: #000;
+  background-color: #bc1aa1;
+  border-radius: 8px;
+} 
+
+ul.sub li:nth-child(6):hover > a{
+  color: #000;
+  background-color: #1a9475;
+  border-radius: 8px;
+} 
+
+ul.sub li:nth-child(7):hover > a{
+  color: #000;
+  background-color: #bc7b1a;
+  border-radius: 8px;
+} 
+
+ul.sub li:nth-child(8):hover > a{
+  color: #000;
+  background-color: #721a1a;
+  border-radius: 8px;
+} 
+
+ul.sub li:nth-child(9):hover > a{
+  color: #000;
+  background-color: #b9bc1a;
+  border-radius: 8px;
+} 
+
+ul.sub li:nth-child(10):hover > a{
+  color: #000;
+  background-color: #1abc93;
+  border-radius: 8px;
+} 
+
 table.default {
   position: relative;
   border-collapse: collapse;
