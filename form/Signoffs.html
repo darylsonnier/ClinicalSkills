@@ -12,8 +12,6 @@
           <th>Group</th>
           <th>Type</th>
           <th class="js-sort-date">Date</th>
-          <th>Edit</th>
-          <th>Delete</th>
         </tr>
     </thead>
     <tbody>
@@ -27,9 +25,7 @@
         <td>{{ .Skillname }}</td>
         <td>{{ .Groupname }}</td>
         <td>{{ .Signofftype }}</td>
-        <td>{{ .Signoffdate }}</td>
-        <td><a href="/editsignoff?id={{ .Id }}">Edit</a></td>
-        <td><a href="/deletesignoff?id={{ .Id }}">Delete</a></td>            
+        <td>{{ .Signoffdate }}</td>        
       </tr>
       {{ end }}
     </tbody>

@@ -21,7 +21,7 @@
       <td>{{ .Enabled }} </td>
       <td><a href="/showskill?id={{ .Id }}">View</a></td>
       <td><a href="/editskill?id={{ .Id }}">Edit</a></td>
-      <td><a href="/deleteskill?id={{ .Id }}">Delete</a></td>       
+      <td><a href="javascript:killit('/deleteskill', '{{ .Id }}');">Delete</a></td>       
     </tr>
   {{ end }}
      </tbody>

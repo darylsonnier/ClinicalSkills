@@ -27,7 +27,7 @@
       <td>{{ .Enabled }} </td> 
       <td><a href="/showuser?id={{ .Id }}">View</a></td>
       <td><a href="/edituser?id={{ .Id }}">Edit</a></td>
-      <td><a href="/deleteuser?id={{ .Id }}">Delete</a></td>            
+      <td><a href="javascript:killit('/deleteuser', '{{ .Id }}');">Delete</a></td>
     </tr>
     {{ end }}
     </tbody>

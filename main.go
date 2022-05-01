@@ -1541,6 +1541,16 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if !HasPermission(r, "admin") {
 		return
 	}
+	db := dbConn()
+	emp := r.URL.Query().Get("id")
+	delForm, err := db.Prepare("DELETE FROM users WHERE id=?")
+	if err != nil {
+		panic(err.Error())
+	}
+	delForm.Exec(emp)
+	log.Println("DELETE User")
+	defer db.Close()
+	http.Redirect(w, r, "/", 301)
 }
 
 func ListSkills(w http.ResponseWriter, r *http.Request) {

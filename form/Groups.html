@@ -23,7 +23,7 @@
           <td>{{ .Enabled }} </td> 
           <td><a href="/showgroup?id={{ .Id }}">View</a></td>
           <td><a href="/editgroup?id={{ .Id }}">Edit</a></td>
-          <td><a href="/deletegroup?id={{ .Id }}">Delete</a></td>
+          <td><a href="javascript:killit('/deletegroup', '{{ .Id }}');">Delete</a></td>
         </tr>
         {{ end }}
       </tbody>

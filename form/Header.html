@@ -15,6 +15,23 @@
                 return confirm('Are you sure?');
             };
 
+            async function killit(path, id){
+                var data = '?id=' + id;
+                console.log(data);
+                if (confirm('Are you sure you wish to delete?')) {
+                    fetch(path + data, {
+                        method: 'POST',
+                        headers: new Headers({"Content-Type": "application/x-www-form-urlencoded"}),
+                        credentials: 'include',
+                        mode:"same-origin"
+                    })
+                    .then((response) => console.log(response))
+                    .catch((error) => {
+                        console.log(error);
+                    });
+                };
+            }
+
             function report(){
                 var divContents = document.getElementById("content").innerHTML;
                 var prnt = window.open('', '', 'height=500, width=500');
